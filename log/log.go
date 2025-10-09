@@ -53,3 +53,9 @@ func New(cfg *Config) (*slog.Logger, error) {
 
 	return slog.New(wrapped), nil
 }
+
+func Defer(fn func() error, errMsg string) {
+	if err := fn(); err != nil {
+		slog.Warn(errMsg, "err", err)
+	}
+}
