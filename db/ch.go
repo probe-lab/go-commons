@@ -62,6 +62,34 @@ type ClickHouseConfig struct {
 	Database   string
 }
 
+// DefaultClickHouseConfig creates a new [ClickHouseConfig] instance with default
+// values for the Host, Port, User, and Pass fields. It also sets the SSL field
+// to false. This function is useful for populating the command line config with
+// default values.
+func DefaultClickHouseConfig(name string) *ClickHouseConfig {
+	return &ClickHouseConfig{
+		BaseConfig: &ClickHouseBaseConfig{
+			Host: "127.0.0.1",
+			Port: 9400,
+			User: name,
+			Pass: "password",
+			SSL:  false,
+		},
+		Database: name,
+	}
+}
+
+// DefaultClickHouseMultiConfig creates a ClickHouseMultiConfig for local use.
+// It initializes the base configuration using [DefaultClickHouseConfig] and
+// sets the Databases field to a single-element slice containing the given name.
+func DefaultClickHouseMultiConfig(name string) *ClickHouseMultiConfig {
+	cfg := DefaultClickHouseConfig(name)
+	return &ClickHouseMultiConfig{
+		BaseConfig: cfg.BaseConfig,
+		Databases:  []string{name},
+	}
+}
+
 // Validate checks the [ClickHouseConfig] fields for validity and returns an
 // error if any field contains invalid data. It ensures that the Host, Port,
 // User, and Pass fields are all properly set.
