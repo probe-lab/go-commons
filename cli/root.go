@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	flagCategoryDatabase  = "Database Configuration:"
 	flagCategoryLogging   = "Logging Configuration:"
 	flagCategoryTelemetry = "Telemetry Configuration:"
 )

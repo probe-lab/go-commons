@@ -15,6 +15,7 @@ func PostgresFlags(envPrefix string, cfg *db.PostgresConfig) []cli.Flag {
 			Sources:     cli.EnvVars(envPrefix + "POSTGRES_DATABASE"),
 			Value:       cfg.Database,
 			Destination: &cfg.Database,
+			Category:    flagCategoryDatabase,
 		},
 	)
 }
@@ -28,6 +29,7 @@ func PostgresMultiFlags(envPrefix string, cfg *db.PostgresMultiConfig) []cli.Fla
 			Sources:     cli.EnvVars(envPrefix + "POSTGRES_DATABASES"),
 			Value:       cfg.Databases,
 			Destination: &cfg.Databases,
+			Category:    flagCategoryDatabase,
 		},
 	)
 }
@@ -40,6 +42,7 @@ func postgresBaseFlags(envPrefix string, cfg *db.PostgresBaseConfig) []cli.Flag 
 			Sources:     cli.EnvVars(envPrefix + "POSTGRES_HOST"),
 			Value:       cfg.Host,
 			Destination: &cfg.Host,
+			Category:    flagCategoryDatabase,
 		},
 		&cli.IntFlag{
 			Name:        "postgres.port",
@@ -47,6 +50,7 @@ func postgresBaseFlags(envPrefix string, cfg *db.PostgresBaseConfig) []cli.Flag 
 			Sources:     cli.EnvVars(envPrefix + "POSTGRES_PORT"),
 			Value:       cfg.Port,
 			Destination: &cfg.Port,
+			Category:    flagCategoryDatabase,
 		},
 		&cli.StringFlag{
 			Name:        "postgres.user",
@@ -54,6 +58,7 @@ func postgresBaseFlags(envPrefix string, cfg *db.PostgresBaseConfig) []cli.Flag 
 			Sources:     cli.EnvVars(envPrefix + "POSTGRES_USER"),
 			Value:       cfg.User,
 			Destination: &cfg.User,
+			Category:    flagCategoryDatabase,
 		},
 		&cli.StringFlag{
 			Name:        "postgres.password",
@@ -61,6 +66,7 @@ func postgresBaseFlags(envPrefix string, cfg *db.PostgresBaseConfig) []cli.Flag 
 			Sources:     cli.EnvVars(envPrefix + "POSTGRES_PASSWORD"),
 			Value:       cfg.Pass,
 			Destination: &cfg.Pass,
+			Category:    flagCategoryDatabase,
 		},
 		&cli.StringFlag{
 			Name:        "postgres.sslmode",
@@ -68,6 +74,7 @@ func postgresBaseFlags(envPrefix string, cfg *db.PostgresBaseConfig) []cli.Flag 
 			Sources:     cli.EnvVars(envPrefix + "POSTGRES_SSLMODE"),
 			Value:       cfg.SSLMode,
 			Destination: &cfg.SSLMode,
+			Category:    flagCategoryDatabase,
 		},
 	}
 }

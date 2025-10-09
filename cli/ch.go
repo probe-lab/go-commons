@@ -26,6 +26,7 @@ func ClickHouseFlags(envPrefix string, cfg *db.ClickHouseConfig) []cli.Flag {
 			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_DATABASE"),
 			Value:       cfg.Database,
 			Destination: &cfg.Database,
+			Category:    flagCategoryDatabase,
 		},
 	)
 }
@@ -43,6 +44,7 @@ func ClickHouseMultiFlags(envPrefix string, cfg *db.ClickHouseMultiConfig) []cli
 			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_DATABASES"),
 			Value:       cfg.Databases,
 			Destination: &cfg.Databases,
+			Category:    flagCategoryDatabase,
 		},
 	)
 }
@@ -66,6 +68,7 @@ func ClickHouseBaseFlags(envPrefix string, cfg *db.ClickHouseBaseConfig) []cli.F
 			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_HOST"),
 			Value:       cfg.Host,
 			Destination: &cfg.Host,
+			Category:    flagCategoryDatabase,
 		},
 		&cli.IntFlag{
 			Name:        "clickhouse.port",
@@ -73,6 +76,7 @@ func ClickHouseBaseFlags(envPrefix string, cfg *db.ClickHouseBaseConfig) []cli.F
 			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_PORT"),
 			Value:       cfg.Port,
 			Destination: &cfg.Port,
+			Category:    flagCategoryDatabase,
 		},
 		&cli.StringFlag{
 			Name:        "clickhouse.user",
@@ -80,6 +84,7 @@ func ClickHouseBaseFlags(envPrefix string, cfg *db.ClickHouseBaseConfig) []cli.F
 			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_USER"),
 			Value:       cfg.User,
 			Destination: &cfg.User,
+			Category:    flagCategoryDatabase,
 		},
 		&cli.StringFlag{
 			Name:        "clickhouse.password",
@@ -87,6 +92,7 @@ func ClickHouseBaseFlags(envPrefix string, cfg *db.ClickHouseBaseConfig) []cli.F
 			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_PASSWORD"),
 			Value:       cfg.Pass,
 			Destination: &cfg.Pass,
+			Category:    flagCategoryDatabase,
 		},
 		&cli.BoolFlag{
 			Name:        "clickhouse.ssl",
@@ -94,6 +100,7 @@ func ClickHouseBaseFlags(envPrefix string, cfg *db.ClickHouseBaseConfig) []cli.F
 			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_SSL"),
 			Value:       cfg.SSL,
 			Destination: &cfg.SSL,
+			Category:    flagCategoryDatabase,
 		},
 	}
 }
