@@ -104,3 +104,57 @@ func ClickHouseBaseFlags(envPrefix string, cfg *db.ClickHouseBaseConfig) []cli.F
 		},
 	}
 }
+
+// ClickHouseMigrationsFlags returns CLI flags for configuring ClickHouse migrations.
+func ClickHouseMigrationsFlags(envPrefix string, cfg *db.ClickHouseMigrationsConfig) []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:        "clickhouse.cluster",
+			Usage:       "The cluster name of the Clickhouse service.",
+			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_CLUSTER"),
+			Value:       cfg.ClusterName,
+			Destination: &cfg.ClusterName,
+			Category:    flagCategoryDatabase,
+		},
+		&cli.StringFlag{
+			Name:        "clickhouse.migrationsTable",
+			Usage:       "The name of the migrations table.",
+			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_MIGRATIONS_TABLE"),
+			Value:       cfg.MigrationsTable,
+			Destination: &cfg.MigrationsTable,
+			Category:    flagCategoryDatabase,
+		},
+		&cli.StringFlag{
+			Name:        "clickhouse.migrationsTableEngine",
+			Usage:       "The engine of the migrations table.",
+			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_MIGRATIONS_TABLE_ENGINE"),
+			Value:       cfg.MigrationsTableEngine,
+			Destination: &cfg.MigrationsTableEngine,
+			Category:    flagCategoryDatabase,
+		},
+		&cli.BoolFlag{
+			Name:        "clickhouse.migrations.multiStatement",
+			Usage:       "Whether to use multi-statement mode when applying migrations.",
+			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_MIGRATIONS_MULTI_STATEMENT"),
+			Value:       cfg.MultiStatementEnabled,
+			Destination: &cfg.MultiStatementEnabled,
+			Category:    flagCategoryDatabase,
+		},
+		&cli.IntFlag{
+			Name:        "clickhouse.migrations.multiStatementMaxSize",
+			Usage:       "The maximum size of a multi-statement.",
+			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_MIGRATIONS_MULTI_STATEMENT_MAX_SIZE"),
+			Value:       cfg.MultiStatementMaxSize,
+			Destination: &cfg.MultiStatementMaxSize,
+			Category:    flagCategoryDatabase,
+		},
+		&cli.BoolFlag{
+			Name:        "clickhouse.migrations.replicatedTableEngines",
+			Usage:       "Whether to use replicated table engines.",
+			Sources:     cli.EnvVars(envPrefix + "CLICKHOUSE_MIGRATIONS_REPLICATED_TABLE_ENGINES"),
+			Value:       cfg.ReplicatedTableEngines,
+			Destination: &cfg.ReplicatedTableEngines,
+			Category:    flagCategoryDatabase,
+		},
+	}
+}
