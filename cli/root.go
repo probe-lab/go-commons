@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime/debug"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -28,11 +30,13 @@ type RootCommand struct {
 }
 
 type RootCommandConfig struct {
+	BuildInfo     *BuildInfo
 	Log           *log.Config
 	Metrics       *tele.MetricsConfig
 	Trace         *tele.TraceConfig
 	ShutdownGrace time.Duration
 	EnvPrefix     string
+	AWSRegion     string
 
 	metricsShutdown func(ctx context.Context) error
 	tracesShutdown  func(ctx context.Context) error
@@ -40,13 +44,27 @@ type RootCommandConfig struct {
 
 func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 	cfg := &RootCommandConfig{
-		Log:             log.DefaultConfig(),
-		Metrics:         tele.DefaultMetricsConfig(cmd.Name),
-		Trace:           tele.DefaultTraceConfig(),
-		ShutdownGrace:   30 * time.Second,
-		EnvPrefix:       buildEnvPrefix(cmd.Name),
+		BuildInfo:     buildInfo(),
+		Log:           log.DefaultConfig(),
+		Metrics:       tele.DefaultMetricsConfig(cmd.Name),
+		Trace:         tele.DefaultTraceConfig(),
+		ShutdownGrace: 30 * time.Second,
+		EnvPrefix:     buildEnvPrefix(cmd.Name),
+		AWSRegion:     "",
+
 		metricsShutdown: func(ctx context.Context) error { return nil },
 		tracesShutdown:  func(ctx context.Context) error { return nil },
+	}
+
+	shortCommit := cfg.BuildInfo.ShortCommit()
+	if cfg.BuildInfo.Dirty {
+		shortCommit += "+dirty"
+	}
+
+	if cmd.Version == "" {
+		cmd.Version = shortCommit
+	} else {
+		cmd.Version += "-" + shortCommit
 	}
 
 	cmd.Flags = append(cmd.Flags, []cli.Flag{
@@ -121,6 +139,14 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 			Value:       cfg.ShutdownGrace,
 			Destination: &cfg.ShutdownGrace,
 			Hidden:      true,
+		},
+		&cli.StringFlag{
+			Name:        "aws.region",
+			Sources:     cli.EnvVars("AWS_REGION"),
+			Usage:       "On which path should the metrics endpoint listen",
+			Value:       cfg.Metrics.Path,
+			Destination: &cfg.Metrics.Path,
+			Category:    flagCategoryTelemetry,
 		},
 	}...)
 
@@ -284,4 +310,38 @@ func buildEnvPrefix(name string) string {
 		prefix += "_"
 	}
 	return prefix
+}
+
+type BuildInfo struct {
+	Commit string
+	Dirty  bool
+}
+
+func (bi *BuildInfo) ShortCommit() string {
+	shortCommit := bi.Commit
+	if len(shortCommit) > 8 {
+		shortCommit = shortCommit[:8]
+	}
+	return shortCommit
+}
+
+func buildInfo() *BuildInfo {
+	bi := &BuildInfo{}
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				bi.Commit = setting.Value
+
+			case "vcs.modified":
+				dirty, err := strconv.ParseBool(setting.Value)
+				if err != nil {
+					panic(err)
+				}
+				bi.Dirty = dirty
+			}
+		}
+	}
+
+	return bi
 }

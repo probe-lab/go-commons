@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"runtime/debug"
+	"strconv"
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -26,6 +27,7 @@ type ServerConfig struct {
 	Listener net.Listener
 	Host     string
 	Port     int
+	LogOpts  []logging.Option
 }
 
 func (cfg *ServerConfig) Validate() error {
@@ -70,10 +72,10 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	loggingOpts := []logging.Option{
+	loggingOpts := append([]logging.Option{
 		logging.WithLogOnEvents(logging.FinishCall),
 		logging.WithDisableLoggingFields(logging.ServiceFieldKey, logging.ComponentFieldKey, logging.MethodTypeFieldKey),
-	}
+	}, cfg.LogOpts...)
 
 	// Create a new gRPC server
 	server := grpc.NewServer(
@@ -152,7 +154,7 @@ func (s *Server) listener() (net.Listener, error) {
 		return s.cfg.Listener, nil
 	}
 
-	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
+	addr := net.JoinHostPort(s.cfg.Host, strconv.Itoa(s.cfg.Port))
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("tcp listen on %s: %w", addr, err)

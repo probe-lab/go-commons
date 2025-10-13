@@ -235,21 +235,6 @@ func TestClickHouseMultiConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestClickHouseMultiConfig_Options(t *testing.T) {
-	cfg := validMultiCfgFn()
-	opts := cfg.Options()
-	assert.Len(t, opts, len(cfg.Databases))
-
-	for i, opt := range opts {
-		assert.NotNil(t, opt.TLS)
-		require.Len(t, opt.Addr, 1)
-		assert.Equal(t, fmt.Sprintf("%s:%d", cfg.BaseConfig.Host, cfg.BaseConfig.Port), opt.Addr[0])
-		assert.Equal(t, cfg.BaseConfig.User, opt.Auth.Username)
-		assert.Equal(t, cfg.Databases[i], opt.Auth.Database)
-		assert.Equal(t, cfg.BaseConfig.Pass, opt.Auth.Password)
-	}
-}
-
 func TestClickHouseMultiFlags(t *testing.T) {
 	envPrefix := "TEST_"
 	flags := ClickHouseMultiFlags(envPrefix, validMultiCfgFn())

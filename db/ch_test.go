@@ -221,17 +221,18 @@ func TestClickHouseMultiConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestClickHouseMultiConfig_Options(t *testing.T) {
+func TestClickHouseMultiConfig_Configs(t *testing.T) {
 	cfg := validClickHouseMultiCfgFn()
-	opts := cfg.Options()
-	assert.Len(t, opts, len(cfg.Databases))
+	cfgs := cfg.Configs()
+	assert.Len(t, cfgs, len(cfg.Databases))
 
-	for i, opt := range opts {
-		assert.NotNil(t, opt.TLS)
-		require.Len(t, opt.Addr, 1)
-		assert.Equal(t, fmt.Sprintf("%s:%d", cfg.BaseConfig.Host, cfg.BaseConfig.Port), opt.Addr[0])
-		assert.Equal(t, cfg.BaseConfig.User, opt.Auth.Username)
-		assert.Equal(t, cfg.Databases[i], opt.Auth.Database)
-		assert.Equal(t, cfg.BaseConfig.Pass, opt.Auth.Password)
+	for i, c := range cfgs {
+		opts := c.Options()
+		assert.NotNil(t, c.BaseConfig)
+		require.Len(t, opts.Addr, 1)
+		assert.Equal(t, fmt.Sprintf("%s:%d", cfg.BaseConfig.Host, cfg.BaseConfig.Port), opts.Addr[0])
+		assert.Equal(t, cfg.BaseConfig.User, opts.Auth.Username)
+		assert.Equal(t, cfg.Databases[i], opts.Auth.Database)
+		assert.Equal(t, cfg.BaseConfig.Pass, opts.Auth.Password)
 	}
 }
