@@ -144,8 +144,8 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 			Name:        "aws.region",
 			Sources:     cli.EnvVars("AWS_REGION"),
 			Usage:       "On which path should the metrics endpoint listen",
-			Value:       cfg.Metrics.Path,
-			Destination: &cfg.Metrics.Path,
+			Value:       cfg.AWSRegion,
+			Destination: &cfg.AWSRegion,
 			Category:    flagCategoryTelemetry,
 		},
 	}...)
