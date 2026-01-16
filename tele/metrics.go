@@ -101,7 +101,7 @@ func initMeterProvider(name string) (metric.MeterProvider, func(ctx context.Cont
 	}
 
 	// initialize the prometheus exporter
-	exporter, err := promexp.New()
+	exporter, err := promexp.New(promexp.WithNamespace(name))
 	if err != nil {
 		return nil, nil, fmt.Errorf("new prometheus exporter: %w", err)
 	}
