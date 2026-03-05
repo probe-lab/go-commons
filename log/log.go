@@ -20,10 +20,10 @@ func DefaultConfig() *Config {
 	}
 }
 
-// New configures a structured logger based on the given configuration. If any
+// NewLogger configures a structured logger based on the given configuration. If any
 // of the configuration parameters do not match expected values, it returns an
 // error.
-func New(cfg *Config) (*slog.Logger, error) {
+func NewLogger(cfg *Config) (*slog.Logger, error) {
 	// parse log level
 	var logLevel slog.Level
 	if err := logLevel.UnmarshalText([]byte(cfg.Level)); err != nil {
@@ -52,6 +52,16 @@ func New(cfg *Config) (*slog.Logger, error) {
 	wrapped := &handler{Handler: h}
 
 	return slog.New(wrapped), nil
+}
+
+// SetGlobaLogger applies the given configuration to the global slog.SetGlobal
+func SetGlobalLogger(cfg *Config) error {
+	logger, err := NewLogger(cfg)
+	if err != nil {
+		return err
+	}
+	slog.SetDefault(logger)
+	return nil
 }
 
 func Defer(fn func() error, errMsg string) {

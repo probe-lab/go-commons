@@ -186,7 +186,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 
 func (r *RootCommand) before(ctx context.Context, c *cli.Command) error {
 	// configure logger
-	slogger, err := log.New(r.cfg.Log)
+	slogger, err := log.NewLogger(r.cfg.Log)
 	if err != nil {
 		return fmt.Errorf("create logger: %w", err)
 	}
