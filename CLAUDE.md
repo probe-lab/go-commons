@@ -61,6 +61,9 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 **grpc/**: gRPC server utilities
 - `grpc/server.go`: gRPC server with OpenTelemetry, health checks, panic recovery, and rate limiting
 
+**ptr/**: Pointer utilities
+- `ptr/ptr.go`: Generic `From[T]` function that returns `nil` for zero values, otherwise a pointer to the value
+
 ### Key Design Patterns
 
 **Configuration-First Approach**: Each package provides default configuration constructors (e.g., `DefaultClickHouseConfig()`, `DefaultMetricsConfig()`) and validation methods.
@@ -86,7 +89,6 @@ Key external dependencies:
 ## Development Notes
 
 - Uses Go 1.25.1
-- No README.md present in repository
 - Build info is automatically extracted from VCS during compilation
 - Environment variable configuration follows `{SERVICE_NAME}_{CONFIG_OPTION}` pattern
 - Supports both local development and clustered ClickHouse deployments
