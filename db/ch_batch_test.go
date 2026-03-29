@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/column"
@@ -23,8 +24,6 @@ type mockBatch struct {
 	appended  []any
 	appendErr error
 	sendErr   error
-	// onSend is called when Send succeeds, useful for signaling tests.
-	onSend func()
 }
 
 func (m *mockBatch) Abort() error { return nil }
@@ -45,9 +44,6 @@ func (m *mockBatch) Close() error                        { return nil }
 func (m *mockBatch) Send() error {
 	if m.sendErr != nil {
 		return m.sendErr
-	}
-	if m.onSend != nil {
-		m.onSend()
 	}
 	return nil
 }
@@ -321,27 +317,31 @@ func TestBatchInserter_OnDroppedRows(t *testing.T) {
 }
 
 func TestBatchInserter_Start_flushesOnInterval(t *testing.T) {
-	sent := make(chan struct{}, 1)
-	batch := &mockBatch{onSend: func() { sent <- struct{}{} }}
-	conn := &mockConn{batch: batch}
-	cfg := &BatchInserterConfig[testRow]{MaxBatchSize: 1000, FlushInterval: 5 * time.Millisecond}
-	b := newTestInserter(t, conn, cfg)
-	b.Start(context.Background())
+	synctest.Test(t, func(t *testing.T) {
+		batch := &mockBatch{}
+		conn := &mockConn{batch: batch}
+		cfg := &BatchInserterConfig[testRow]{
+			MaxBatchSize:  1000,
+			FlushInterval: 5 * time.Second,
+		}
+		b := newTestInserter(t, conn, cfg)
+		b.Start(t.Context())
 
-	require.NoError(t, b.Add(context.Background(), testRow{Value: 42}))
+		require.NoError(t, b.Add(t.Context(), testRow{Value: 42}))
 
-	select {
-	case <-sent:
-	case <-time.After(time.Second):
-		t.Fatal("interval flush did not occur within timeout")
-	}
+		// Advance the fake clock past FlushInterval. Once all goroutines in
+		// the bubble are durably blocked, the fake clock advances automatically.
+		time.Sleep(5 * time.Second)
+		// Wait for the run goroutine to finish doFlush and return to select.
+		synctest.Wait()
 
-	assert.Len(t, batch.appended, 1)
-	v, ok := batch.appended[0].(*testRow)
-	require.True(t, ok)
-	assert.Equal(t, 42, v.Value)
+		assert.Len(t, batch.appended, 1)
+		v, ok := batch.appended[0].(*testRow)
+		require.True(t, ok)
+		assert.Equal(t, 42, v.Value)
 
-	require.NoError(t, b.Stop(context.Background()))
+		require.NoError(t, b.Stop(t.Context()))
+	})
 }
 
 // TestBatchInserter_rowType verifies that AppendStruct receives a pointer to T.
