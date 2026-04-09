@@ -77,12 +77,18 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		logging.WithDisableLoggingFields(logging.ServiceFieldKey, logging.ComponentFieldKey, logging.MethodTypeFieldKey),
 	}, cfg.LogOpts...)
 
+	recoverOpt := recoverInterceptor()
+
 	// Create a new gRPC server
 	server := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			logging.UnaryServerInterceptor(loggerInterceptor(), loggingOpts...),
-			recovery.UnaryServerInterceptor(recoverInterceptor()),
+			recovery.UnaryServerInterceptor(recoverOpt),
+		),
+		grpc.ChainStreamInterceptor(
+			logging.StreamServerInterceptor(loggerInterceptor(), loggingOpts...),
+			recovery.StreamServerInterceptor(recoverOpt),
 		),
 	)
 
