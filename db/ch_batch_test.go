@@ -670,6 +670,42 @@ func TestBatchInserter_flushesOnIntervalThenStop(t *testing.T) {
 	})
 }
 
+func TestBatchInserter_Flush_afterStartCtxCancel(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		conn := &mockConn{batch: &mockBatch{}}
+		cfg := DefaultBatchInserterConfig[testRow]()
+		b := newTestInserter(t, conn, cfg)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		b.Start(ctx)
+
+		cancel()
+		synctest.Wait()
+
+		// Flush must return ErrStopped, not block indefinitely.
+		err := b.Flush(t.Context())
+		assert.ErrorIs(t, err, ErrStopped)
+	})
+}
+
+func TestBatchInserter_Submit_afterStartCtxCancel(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		conn := &mockConn{batch: &mockBatch{}}
+		cfg := DefaultBatchInserterConfig[testRow]()
+		b := newTestInserter(t, conn, cfg)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		b.Start(ctx)
+
+		cancel()
+		synctest.Wait()
+
+		// Submit must return ErrStopped, not block indefinitely.
+		err := b.Submit(t.Context(), testRow{Value: 1})
+		assert.ErrorIs(t, err, ErrStopped)
+	})
+}
+
 func TestBatchInserter_Flush_afterStop(t *testing.T) {
 	conn := &mockConn{batch: &mockBatch{}}
 	b := newTestInserter(t, conn, DefaultBatchInserterConfig[testRow]())
