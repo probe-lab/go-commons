@@ -25,16 +25,23 @@
 //	cfg.MaxBatchSize = 5000
 //	cfg.OnDroppedRows = func(rows []VisitRow, err error) {
 //	    // Called when a flush fails. Rows are already logged by the inserter.
-//	    droppedRowsCounter.Add(ctx, int64(len(rows)))
+//	    droppedRowsCounter.Submit(ctx, int64(len(rows)))
 //	}
 //
 //	inserter, err := db.NewBatchInserter[VisitRow](conn, "visits", cfg)
 //	if err != nil { ... }
-//	inserter.Start(ctx)
-//	defer inserter.Stop(ctx)
 //
-//	// Submit rows from any goroutine; Add blocks if the inserter is mid-flush.
-//	if err := inserter.Add(ctx, VisitRow{Timestamp: time.Now(), PeerID: "Qm..."}); err != nil { ... }
+//	// Start with a long-lived context; normal flushes use this context.
+//	inserter.Start(context.Background())
+//
+//	// Submit rows from any goroutine; Submit blocks if the inserter is mid-flush.
+//	if err := inserter.Submit(ctx, VisitRow{Timestamp: time.Now(), PeerID: "Qm..."}); err != nil { ... }
+//
+//	// On shutdown, Stop drains buffered rows using its own context as the
+//	// flush deadline — independent of the Start context.
+//	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+//	defer cancel()
+//	if err := inserter.Stop(shutdownCtx); err != nil { ... }
 //
 // # Multiple Tables
 //
@@ -48,8 +55,13 @@
 //	group := &db.BatchInserterGroup{}
 //	group.Add(visitInserter)
 //	group.Add(dialInserter)
-//	group.Start(ctx)
-//	defer group.Stop(ctx)
+//	group.Start(context.Background())
+//
+//	// ... submit rows ...
+//
+//	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+//	defer cancel()
+//	if err := group.Stop(shutdownCtx); err != nil { ... }
 //
 // # Metrics
 //
