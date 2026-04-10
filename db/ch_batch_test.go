@@ -163,7 +163,7 @@ func TestBatchInserterConfig_Validate(t *testing.T) {
 				cfg.ChannelBuffer = cfg.MaxBatchSize + 1
 				return cfg
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -675,4 +675,27 @@ func TestBatchInserter_Flush_afterStop(t *testing.T) {
 
 	err := b.Flush(context.Background())
 	assert.ErrorIs(t, err, ErrStopped)
+}
+
+func TestBatchInserter_channelBufferLargerThanBatchSize(t *testing.T) {
+	batch := &mockBatch{}
+	conn := &mockConn{batch: batch}
+	cfg := &BatchInserterConfig[testRow]{
+		MaxBatchSize:  3,
+		FlushInterval: time.Hour,
+		ChannelBuffer: 10, // larger than MaxBatchSize
+	}
+	b := newTestInserter(t, conn, cfg)
+	b.Start(t.Context())
+
+	for i := range 7 {
+		require.NoError(t, b.Submit(t.Context(), testRow{Value: i}))
+	}
+
+	require.NoError(t, b.Stop(t.Context()))
+
+	assert.Len(t, batch.appended, 7)
+	for i, size := range batch.sentSizes {
+		assert.LessOrEqual(t, size, 3, "send #%d had %d rows", i, size)
+	}
 }
