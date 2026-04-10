@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"sync"
 	"time"
 
@@ -14,8 +15,10 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// ErrStopped is returned by Add and Flush when called after Stop.
+// ErrStopped is returned by Submit and Flush when called after Stop.
 var ErrStopped = errors.New("batch inserter stopped")
+
+var validTableName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
 
 var (
 	attrKeyTable   = attribute.Key("table")
@@ -24,8 +27,15 @@ var (
 
 // BatchInserterConfig holds configuration for a [BatchInserter].
 type BatchInserterConfig[T any] struct {
-	MaxBatchSize  int
+	// MaxBatchSize is the maximum number of rows to buffer before flushing.
+	MaxBatchSize int
+	// FlushInterval is the maximum time between flushes.
 	FlushInterval time.Duration
+	// ChannelBuffer is the capacity of the internal row channel. A larger buffer
+	// allows callers to enqueue rows without blocking while the run goroutine is
+	// busy flushing. The memory cost is ChannelBuffer * sizeof(T), allocated
+	// upfront. Defaults to MaxBatchSize when zero.
+	ChannelBuffer int
 	// Meter is the OTel meter used to record batch inserter metrics. If nil,
 	// the global meter provider is used, which is a no-op when
 	// [tele.ServeMetrics] has not been called with metrics enabled.
@@ -42,6 +52,7 @@ func DefaultBatchInserterConfig[T any]() *BatchInserterConfig[T] {
 	return &BatchInserterConfig[T]{
 		MaxBatchSize:  1000,
 		FlushInterval: 5 * time.Second,
+		ChannelBuffer: 1000,
 	}
 }
 
@@ -57,6 +68,14 @@ func (cfg *BatchInserterConfig[T]) Validate() error {
 
 	if cfg.FlushInterval <= 0 {
 		return fmt.Errorf("flush interval must be a positive duration")
+	}
+
+	if cfg.ChannelBuffer < 0 {
+		return fmt.Errorf("channel buffer must be a non-negative integer")
+	}
+
+	if cfg.ChannelBuffer > cfg.MaxBatchSize {
+		return fmt.Errorf("channel buffer (%d) must not exceed max batch size (%d)", cfg.ChannelBuffer, cfg.MaxBatchSize)
 	}
 
 	return nil
@@ -79,28 +98,35 @@ func (cfg *BatchInserterConfig[T]) Validate() error {
 // object that cannot be retried; re-batching would require a new PrepareBatch
 // call anyway. Use [BatchInserterConfig.OnDroppedRows] to handle dropped rows.
 //
-// Call [BatchInserter.Start] before [BatchInserter.Add] or [BatchInserter.Flush],
+// Call [BatchInserter.Start] before [BatchInserter.Submit] or [BatchInserter.Flush],
 // and [BatchInserter.Stop] to drain and shut down.
 type BatchInserter[T any] struct {
-	conn      driver.Conn
-	table     string
-	cfg       *BatchInserterConfig[T]
-	rowCh     chan T
-	flushCh   chan chan error
-	stopCh    chan struct{}
-	done      chan struct{}
-	startOnce sync.Once
-	stopOnce  sync.Once
+	conn  driver.Conn             // ClickHouse connection used for batch inserts
+	table string                  // target table name
+	cfg   *BatchInserterConfig[T] // user-supplied configuration
+
+	rowCh     chan T               // buffered channel through which Submit sends rows to run
+	flushCh   chan chan error      // unbuffered; Flush sends a response channel, run replies with the flush result
+	stopCh    chan struct{}        // closed by Stop to signal the run goroutine to drain and exit
+	stopCtxCh chan context.Context // buffered(1); Stop sends its context before closing stopCh
+	done      chan struct{}        // closed by run when it returns; Stop blocks on this
+
+	startOnce sync.Once // ensures Start launches the run goroutine at most once
+	stopOnce  sync.Once // ensures Stop closes stopCh at most once
+
+	// buf holds rows pending flush. Owned exclusively by the run goroutine;
+	// initialized when Start is called.
+	buf []T
 
 	// OTel instruments; always valid (no-op if metrics not configured).
-	mRowsFlushed   metric.Int64Counter
-	mRowsDropped   metric.Int64Counter
-	mFlushDuration metric.Float64Histogram
-	mFlushSize     metric.Int64Histogram
+	mRowsFlushed   metric.Int64Counter     // total rows successfully flushed
+	mRowsDropped   metric.Int64Counter     // total rows lost due to flush errors
+	mFlushDuration metric.Float64Histogram // time per flush operation (seconds)
+	mFlushSize     metric.Int64Histogram   // rows per flush attempt
 }
 
 // NewBatchInserter creates a new [BatchInserter]. Call [BatchInserter.Start]
-// before [BatchInserter.Add] or [BatchInserter.Flush].
+// before [BatchInserter.Submit] or [BatchInserter.Flush].
 func NewBatchInserter[T any](conn driver.Conn, table string, cfg *BatchInserterConfig[T]) (*BatchInserter[T], error) {
 	if conn == nil {
 		return nil, fmt.Errorf("conn must not be nil")
@@ -108,6 +134,14 @@ func NewBatchInserter[T any](conn driver.Conn, table string, cfg *BatchInserterC
 
 	if table == "" {
 		return nil, fmt.Errorf("table must not be empty")
+	}
+
+	if !validTableName.MatchString(table) {
+		return nil, fmt.Errorf("table name %q contains invalid characters", table)
+	}
+
+	if cfg.ChannelBuffer == 0 {
+		cfg.ChannelBuffer = cfg.MaxBatchSize
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -120,13 +154,14 @@ func NewBatchInserter[T any](conn driver.Conn, table string, cfg *BatchInserterC
 	}
 
 	b := &BatchInserter[T]{
-		conn:    conn,
-		table:   table,
-		cfg:     cfg,
-		rowCh:   make(chan T),
-		flushCh: make(chan chan error),
-		stopCh:  make(chan struct{}),
-		done:    make(chan struct{}),
+		conn:      conn,
+		table:     table,
+		cfg:       cfg,
+		rowCh:     make(chan T, cfg.ChannelBuffer),
+		flushCh:   make(chan chan error),
+		stopCh:    make(chan struct{}),
+		stopCtxCh: make(chan context.Context, 1),
+		done:      make(chan struct{}),
 	}
 
 	// The OTel SDK deduplicates instruments with the same name, type, unit, and
@@ -163,8 +198,13 @@ func NewBatchInserter[T any](conn driver.Conn, table string, cfg *BatchInserterC
 }
 
 // Start launches the background goroutine that owns the row buffer.
-// Subsequent calls are no-ops. Must be called before [BatchInserter.Add] or
+// Subsequent calls are no-ops. Must be called before [BatchInserter.Submit] or
 // [BatchInserter.Flush].
+//
+// The context controls the lifetime of normal flush operations (size-triggered,
+// interval, and manual). Cancelling it terminates the background goroutine
+// immediately without a final drain; use [BatchInserter.Stop] for orderly
+// shutdown with a dedicated drain deadline.
 func (b *BatchInserter[T]) Start(ctx context.Context) {
 	b.startOnce.Do(func() {
 		go b.run(ctx)
@@ -174,65 +214,26 @@ func (b *BatchInserter[T]) Start(ctx context.Context) {
 func (b *BatchInserter[T]) run(ctx context.Context) {
 	defer close(b.done)
 
-	buf := make([]T, 0, b.cfg.MaxBatchSize)
+	b.buf = make([]T, 0, b.cfg.MaxBatchSize)
 	ticker := time.NewTicker(b.cfg.FlushInterval)
 	defer ticker.Stop()
-
-	doFlush := func(trigger string) error {
-		if len(buf) == 0 {
-			return nil
-		}
-
-		// Capture rows and allocate a new backing array for buf so that the
-		// rows slice remains stable for the OnDroppedRows callback.
-		rows := buf
-		buf = make([]T, 0, b.cfg.MaxBatchSize)
-
-		start := time.Now()
-		err := b.sendBatch(ctx, rows)
-		elapsed := time.Since(start)
-
-		flushAttrs := metric.WithAttributes(
-			attrKeyTable.String(b.table),
-			attrKeyTrigger.String(trigger),
-		)
-		b.mFlushDuration.Record(ctx, elapsed.Seconds(), flushAttrs)
-		b.mFlushSize.Record(ctx, int64(len(rows)), flushAttrs)
-
-		if err != nil {
-			b.mRowsDropped.Add(ctx, int64(len(rows)), metric.WithAttributes(attrKeyTable.String(b.table)))
-			slog.Error("Failed to flush batch",
-				"table", b.table,
-				"dropped_rows", len(rows),
-				"trigger", trigger,
-				"err", err,
-			)
-			if b.cfg.OnDroppedRows != nil {
-				b.cfg.OnDroppedRows(rows, err)
-			}
-			return err
-		}
-
-		b.mRowsFlushed.Add(ctx, int64(len(rows)), metric.WithAttributes(attrKeyTable.String(b.table)))
-		return nil
-	}
 
 	for {
 		select {
 		case row := <-b.rowCh:
-			buf = append(buf, row)
-			if len(buf) >= b.cfg.MaxBatchSize {
-				_ = doFlush("size") // error logged and forwarded via OnDroppedRows
+			b.buf = append(b.buf, row)
+			if len(b.buf) >= b.cfg.MaxBatchSize {
+				_ = b.doFlush(ctx, "size") // error logged and forwarded via OnDroppedRows
 			}
 
 		case <-ticker.C:
-			_ = doFlush("interval") // error logged and forwarded via OnDroppedRows
+			_ = b.doFlush(ctx, "interval") // error logged and forwarded via OnDroppedRows
 
 		case resp := <-b.flushCh:
-			resp <- doFlush("manual")
+			resp <- b.doFlush(ctx, "manual")
 
 		case <-b.stopCh:
-			_ = doFlush("stop") // error logged and forwarded via OnDroppedRows
+			b.drain(<-b.stopCtxCh)
 			return
 
 		case <-ctx.Done():
@@ -241,9 +242,115 @@ func (b *BatchInserter[T]) run(ctx context.Context) {
 	}
 }
 
-// Add submits a row to the batch. It blocks until the background goroutine
+// drain flushes all remaining rows during shutdown. It loops until both buf
+// and rowCh are empty. On a flush error, any rows still in rowCh are drained
+// and reported via OnDroppedRows. Owned exclusively by the run goroutine.
+func (b *BatchInserter[T]) drain(ctx context.Context) {
+	for len(b.buf) > 0 || len(b.rowCh) > 0 {
+		err := b.doFlush(ctx, "stop")
+		if err == nil {
+			continue
+		}
+
+		// doFlush already reported the failed batch via
+		// OnDroppedRows. Drain any remaining rowCh rows
+		// and report them as dropped too.
+		remaining := make([]T, 0, len(b.rowCh))
+	drainRemaining:
+		for {
+			select {
+			case row := <-b.rowCh:
+				remaining = append(remaining, row)
+			default:
+				break drainRemaining
+			}
+		}
+
+		if len(remaining) == 0 {
+			return
+		}
+
+		b.mRowsDropped.Add(ctx, int64(len(remaining)), metric.WithAttributes(attrKeyTable.String(b.table)))
+		slog.Error("Dropping remaining rows after flush error during stop",
+			"table", b.table,
+			"dropped_rows", len(remaining),
+			"err", err,
+		)
+
+		if b.cfg.OnDroppedRows != nil {
+			b.cfg.OnDroppedRows(remaining, err)
+		}
+
+		return
+	}
+}
+
+// doFlush drains rowCh into buf up to MaxBatchSize, then sends the batch.
+// Owned exclusively by the run goroutine.
+func (b *BatchInserter[T]) doFlush(ctx context.Context, trigger string) error {
+	// Drain any rows buffered in rowCh so that a flush issued right
+	// after Submit (which returns as soon as the channel accepts the row)
+	// captures all pending rows regardless of select ordering.
+	// Cap at MaxBatchSize to keep flush payloads bounded.
+drain:
+	for len(b.buf) < b.cfg.MaxBatchSize {
+		select {
+		case row := <-b.rowCh:
+			b.buf = append(b.buf, row)
+		default:
+			break drain
+		}
+	}
+
+	if len(b.buf) == 0 {
+		return nil
+	}
+
+	// Capture rows and allocate a new backing array for buf so that the
+	// rows slice remains stable for the OnDroppedRows callback.
+	rows := b.buf
+	b.buf = make([]T, 0, b.cfg.MaxBatchSize)
+
+	start := time.Now()
+	err := b.sendBatch(ctx, rows)
+	elapsed := time.Since(start)
+
+	flushAttrs := metric.WithAttributes(
+		attrKeyTable.String(b.table),
+		attrKeyTrigger.String(trigger),
+	)
+	b.mFlushDuration.Record(ctx, elapsed.Seconds(), flushAttrs)
+	b.mFlushSize.Record(ctx, int64(len(rows)), flushAttrs)
+
+	if err != nil {
+		b.mRowsDropped.Add(ctx, int64(len(rows)), metric.WithAttributes(attrKeyTable.String(b.table)))
+		slog.Error("Failed to flush batch",
+			"table", b.table,
+			"dropped_rows", len(rows),
+			"trigger", trigger,
+			"err", err,
+		)
+		if b.cfg.OnDroppedRows != nil {
+			b.cfg.OnDroppedRows(rows, err)
+		}
+		return err
+	}
+
+	b.mRowsFlushed.Add(ctx, int64(len(rows)), metric.WithAttributes(attrKeyTable.String(b.table)))
+	return nil
+}
+
+// Submit submits a row to the batch. It blocks until the background goroutine
 // accepts the row, the context is canceled, or Stop has been called.
-func (b *BatchInserter[T]) Add(ctx context.Context, row T) error {
+func (b *BatchInserter[T]) Submit(ctx context.Context, row T) error {
+	// Check stopCh first to prefer ErrStopped after Stop, avoiding sends into
+	// rowCh that the run goroutine may no longer drain.
+	select {
+	case <-b.stopCh:
+		return fmt.Errorf("add to %s: %w", b.table, ErrStopped)
+	default:
+	}
+
 	select {
 	case b.rowCh <- row:
 		return nil
@@ -275,9 +382,18 @@ func (b *BatchInserter[T]) Flush(ctx context.Context) error {
 }
 
 // Stop signals the background goroutine to exit and waits for it to finish,
-// performing a final flush of any buffered rows. Safe to call multiple times.
+// performing a final flush of any buffered rows. Safe to call multiple times;
+// only the first caller's context is used for the drain.
+//
+// The context controls the final drain flush operations. Use a timeout context
+// to bound how long the drain may take. If the context is cancelled before the
+// drain completes, remaining rows are dropped via [BatchInserterConfig.OnDroppedRows].
 func (b *BatchInserter[T]) Stop(ctx context.Context) error {
-	b.stopOnce.Do(func() { close(b.stopCh) })
+	b.stopOnce.Do(func() {
+		b.stopCtxCh <- ctx
+		close(b.stopCh)
+	})
+
 	select {
 	case <-b.done:
 		return nil
@@ -310,6 +426,7 @@ func (b *BatchInserter[T]) sendBatch(ctx context.Context, rows []T) error {
 // to manage multiple typed inserters without type parameters.
 type batchLifecycle interface {
 	Start(ctx context.Context)
+	Flush(ctx context.Context) error
 	Stop(ctx context.Context) error
 }
 
@@ -329,6 +446,22 @@ func (g *BatchInserterGroup) Start(ctx context.Context) {
 	for _, i := range g.inserters {
 		i.Start(ctx)
 	}
+}
+
+// Flush calls [BatchInserter.Flush] on all registered inserters concurrently
+// and returns a combined error if any flush failed.
+func (g *BatchInserterGroup) Flush(ctx context.Context) error {
+	errs := make([]error, len(g.inserters))
+	var wg sync.WaitGroup
+	for idx, i := range g.inserters {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs[idx] = i.Flush(ctx)
+		}()
+	}
+	wg.Wait()
+	return errors.Join(errs...)
 }
 
 // Stop calls [BatchInserter.Stop] on all registered inserters concurrently
