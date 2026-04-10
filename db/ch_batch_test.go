@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -695,7 +698,76 @@ func TestBatchInserter_channelBufferLargerThanBatchSize(t *testing.T) {
 	require.NoError(t, b.Stop(t.Context()))
 
 	assert.Len(t, batch.appended, 7)
+	assert.Len(t, batch.sentSizes, 3)
 	for i, size := range batch.sentSizes {
 		assert.LessOrEqual(t, size, 3, "send #%d had %d rows", i, size)
+	}
+}
+
+// TestBatchInserter_Stop_noSilentDataLoss races many Submit goroutines against
+// Stop and verifies that every row is accounted for: either flushed, reported
+// via OnDroppedRows, or rejected with ErrStopped. If the CRITICAL review
+// finding (rows silently dropped without OnDroppedRows) is real, this test
+// should fail at least occasionally under repeated runs or -race.
+func TestBatchInserter_Stop_noSilentDataLoss(t *testing.T) {
+	const iterations = 1000
+	const numSubmitters = 10
+	const rowsPerSubmitter = 10
+	const totalRows = numSubmitters * rowsPerSubmitter
+
+	for iter := range iterations {
+		batch := &mockBatch{}
+		conn := &mockConn{batch: batch}
+
+		var mu sync.Mutex
+		var droppedCount int
+		cfg := &BatchInserterConfig[testRow]{
+			MaxBatchSize:  5,
+			FlushInterval: time.Hour,
+			ChannelBuffer: 10,
+			OnDroppedRows: func(rows []testRow, _ error) {
+				mu.Lock()
+				droppedCount += len(rows)
+				mu.Unlock()
+			},
+		}
+		b, err := NewBatchInserter[testRow](conn, "test_table", cfg)
+		require.NoError(t, err)
+		b.Start(context.Background())
+
+		var rejectedCount atomic.Int64
+		var wg sync.WaitGroup
+		wg.Add(numSubmitters)
+
+		for i := range numSubmitters {
+			go func() {
+				defer wg.Done()
+				for j := range rowsPerSubmitter {
+					if err := b.Submit(context.Background(), testRow{Value: i*rowsPerSubmitter + j}); err != nil {
+						rejectedCount.Add(1)
+					}
+				}
+			}()
+		}
+
+		// Let submitters race, then stop.
+		runtime.Gosched()
+		require.NoError(t, b.Stop(context.Background()))
+		wg.Wait()
+
+		// After Stop returns (done is closed) and all submitters finished,
+		// every row must be accounted for.
+		mu.Lock()
+		dropped := droppedCount
+		mu.Unlock()
+
+		flushed := len(batch.appended)
+		rejected := int(rejectedCount.Load())
+		accounted := flushed + dropped + rejected
+
+		if accounted != totalRows {
+			t.Fatalf("iteration %d: rows not accounted for: flushed=%d dropped=%d rejected=%d total=%d want=%d",
+				iter, flushed, dropped, rejected, accounted, totalRows)
+		}
 	}
 }

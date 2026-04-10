@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -106,6 +108,7 @@ type BatchInserter[T any] struct {
 	stopCh    chan struct{}        // closed by Stop to signal the run goroutine to drain and exit
 	stopCtxCh chan context.Context // buffered(1); Stop sends its context before closing stopCh
 	done      chan struct{}        // closed by run when it returns; Stop blocks on this
+	submits   atomic.Int32
 
 	startOnce sync.Once // ensures Start launches the run goroutine at most once
 	stopOnce  sync.Once // ensures Stop closes stopCh at most once
@@ -243,42 +246,16 @@ func (b *BatchInserter[T]) run(ctx context.Context) {
 // and rowCh are empty. On a flush error, any rows still in rowCh are drained
 // and reported via OnDroppedRows. Owned exclusively by the run goroutine.
 func (b *BatchInserter[T]) drain(ctx context.Context) {
-	for len(b.buf) > 0 || len(b.rowCh) > 0 {
-		err := b.doFlush(ctx, "stop")
-		if err == nil {
-			continue
-		}
-
-		// doFlush already reported the failed batch via
-		// OnDroppedRows. Drain any remaining rowCh rows
-		// and report them as dropped too.
-		remaining := make([]T, 0, len(b.rowCh))
-	drainRemaining:
-		for {
-			select {
-			case row := <-b.rowCh:
-				remaining = append(remaining, row)
-			default:
-				break drainRemaining
-			}
-		}
-
-		if len(remaining) == 0 {
-			return
-		}
-
-		b.mRowsDropped.Add(ctx, int64(len(remaining)), metric.WithAttributes(attrKeyTable.String(b.table)))
-		slog.Error("Dropping remaining rows after flush error during stop",
-			"table", b.table,
-			"dropped_rows", len(remaining),
-			"err", err,
-		)
-
-		if b.cfg.OnDroppedRows != nil {
-			b.cfg.OnDroppedRows(remaining, err)
-		}
-
-		return
+	// Check submits first: when submits.Load() returns 0, all in-flight
+	// Submit calls have completed — including their channel send, which is
+	// sequenced before the deferred counter decrement. This guarantees any
+	// rows they sent are visible in rowCh by the time we check its length.
+	// Checking rowCh or buf first would allow a TOCTOU race where a Submit
+	// sends a row and decrements the counter between the rowCh and submits
+	// checks, causing drain to exit with an unread row in the channel.
+	for b.submits.Load() > 0 || len(b.buf) > 0 || len(b.rowCh) > 0 {
+		_ = b.doFlush(ctx, "stop")
+		runtime.Gosched() // minimizes busy-looping
 	}
 }
 
@@ -340,8 +317,17 @@ drain:
 // Submit submits a row to the batch. It blocks until the background goroutine
 // accepts the row, the context is canceled, or Stop has been called.
 func (b *BatchInserter[T]) Submit(ctx context.Context, row T) error {
-	// Check stopCh first to prefer ErrStopped after Stop, avoiding sends into
-	// rowCh that the run goroutine may no longer drain.
+	b.submits.Add(1)
+	defer b.submits.Add(-1)
+
+	// Fast-reject: return ErrStopped immediately if Stop has been called.
+	// Without this, the second select would pick randomly between rowCh and
+	// stopCh when both are ready, allowing ~50% of post-Stop calls to send
+	// rows. That is still correct (drain's submits counter ensures those
+	// rows are flushed), but it extends shutdown: a caller in a tight loop
+	// keeps feeding rows that drain must process. This early check ensures
+	// only the few Submits already past this point when stopCh closes can
+	// race into the second select, letting drain converge quickly.
 	select {
 	case <-b.stopCh:
 		return fmt.Errorf("add to %s: %w", b.table, ErrStopped)
