@@ -331,6 +331,8 @@ func (b *BatchInserter[T]) Submit(ctx context.Context, row T) error {
 	select {
 	case <-b.stopCh:
 		return fmt.Errorf("add to %s: %w", b.table, ErrStopped)
+	case <-b.done:
+		return fmt.Errorf("add to %s: %w", b.table, ErrStopped)
 	default:
 	}
 
@@ -338,6 +340,8 @@ func (b *BatchInserter[T]) Submit(ctx context.Context, row T) error {
 	case b.rowCh <- row:
 		return nil
 	case <-b.stopCh:
+		return fmt.Errorf("add to %s: %w", b.table, ErrStopped)
+	case <-b.done:
 		return fmt.Errorf("add to %s: %w", b.table, ErrStopped)
 	case <-ctx.Done():
 		return ctx.Err()
@@ -351,6 +355,8 @@ func (b *BatchInserter[T]) Flush(ctx context.Context) error {
 	select {
 	case b.flushCh <- resp:
 	case <-b.stopCh:
+		return fmt.Errorf("flush %s: %w", b.table, ErrStopped)
+	case <-b.done:
 		return fmt.Errorf("flush %s: %w", b.table, ErrStopped)
 	case <-ctx.Done():
 		return ctx.Err()
@@ -420,8 +426,8 @@ type BatchInserterGroup struct {
 }
 
 // Add registers an inserter with the group. Must be called before [BatchInserterGroup.Start].
-func (g *BatchInserterGroup) Add(i batchLifecycle) {
-	g.inserters = append(g.inserters, i)
+func (g *BatchInserterGroup) Add(i ...batchLifecycle) {
+	g.inserters = append(g.inserters, i...)
 }
 
 // Start calls [BatchInserter.Start] on all registered inserters.
