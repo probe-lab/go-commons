@@ -140,12 +140,13 @@ func NewBatchInserter[T any](conn driver.Conn, table string, cfg *BatchInserterC
 		return nil, fmt.Errorf("table name %q contains invalid characters", table)
 	}
 
-	if cfg.ChannelBuffer == 0 {
-		cfg.ChannelBuffer = cfg.MaxBatchSize
-	}
-
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("batch inserter config: %w", err)
+	}
+
+	channelBuffer := cfg.ChannelBuffer
+	if channelBuffer == 0 {
+		channelBuffer = cfg.MaxBatchSize
 	}
 
 	meter := cfg.Meter
@@ -157,7 +158,7 @@ func NewBatchInserter[T any](conn driver.Conn, table string, cfg *BatchInserterC
 		conn:      conn,
 		table:     table,
 		cfg:       cfg,
-		rowCh:     make(chan T, cfg.ChannelBuffer),
+		rowCh:     make(chan T, channelBuffer),
 		flushCh:   make(chan chan error),
 		stopCh:    make(chan struct{}),
 		stopCtxCh: make(chan context.Context, 1),
