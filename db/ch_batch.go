@@ -74,10 +74,6 @@ func (cfg *BatchInserterConfig[T]) Validate() error {
 		return fmt.Errorf("channel buffer must be a non-negative integer")
 	}
 
-	if cfg.ChannelBuffer > cfg.MaxBatchSize {
-		return fmt.Errorf("channel buffer (%d) must not exceed max batch size (%d)", cfg.ChannelBuffer, cfg.MaxBatchSize)
-	}
-
 	return nil
 }
 
