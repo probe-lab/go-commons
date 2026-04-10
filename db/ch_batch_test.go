@@ -656,11 +656,23 @@ func TestBatchInserter_flushesOnIntervalThenStop(t *testing.T) {
 			require.NoError(t, b.Submit(t.Context(), testRow{Value: i}))
 		}
 
-		// Advance past flush interval, then stop immediately.
+		// Advance past flush interval and wait for the interval flush to complete.
 		time.Sleep(5 * time.Second)
+		synctest.Wait()
+
 		require.NoError(t, b.Stop(t.Context()))
 
 		// All rows must be flushed exactly once.
 		assert.Len(t, batch.appended, 3)
 	})
+}
+
+func TestBatchInserter_Flush_afterStop(t *testing.T) {
+	conn := &mockConn{batch: &mockBatch{}}
+	b := newTestInserter(t, conn, DefaultBatchInserterConfig[testRow]())
+	b.Start(context.Background())
+	require.NoError(t, b.Stop(context.Background()))
+
+	err := b.Flush(context.Background())
+	assert.ErrorIs(t, err, ErrStopped)
 }
