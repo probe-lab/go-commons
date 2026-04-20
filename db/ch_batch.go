@@ -255,7 +255,7 @@ func (b *BatchInserter[T]) drain(ctx context.Context) {
 	// checks, causing drain to exit with an unread row in the channel.
 	for b.submits.Load() > 0 || len(b.buf) > 0 || len(b.rowCh) > 0 {
 		_ = b.doFlush(ctx, "stop")
-		runtime.Gosched() // minimizes busy-looping
+		runtime.Gosched() // minimizes busy-looping - not necessary for correctness
 	}
 }
 
