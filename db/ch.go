@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net"
+	"os"
 	"strconv"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -302,6 +303,8 @@ func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations
 
 	if errors.Is(err, migrate.ErrNoChange) {
 		slog.Debug("No migrations to apply")
+	} else if errors.Is(err, os.ErrNotExist) {
+		slog.Warn("Migration for current DB version not found. Assuming backwards compatibility and continuing execution.", "err", err.Error(), "currVer", beforeVersion)
 	} else if err != nil {
 		return err
 	} else {
