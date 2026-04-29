@@ -32,6 +32,12 @@ type mockBatch struct {
 	// sentSizes records the number of rows in each Send call.
 	sentSizes []int
 	pending   int
+	// sendCount is an atomic counter incremented on each successful Send.
+	// Tests that need to observe Send progress from outside the run goroutine
+	// (e.g., between synctest time advances) read this rather than the
+	// sentSizes slice, since slice reads would race with future writes that
+	// synctest.Wait does not establish happens-before for.
+	sendCount atomic.Int32
 }
 
 func (m *mockBatch) Abort() error          { return nil }
@@ -56,6 +62,7 @@ func (m *mockBatch) Send() error {
 	}
 	m.sentSizes = append(m.sentSizes, m.pending)
 	m.pending = 0
+	m.sendCount.Add(1)
 	return nil
 }
 
@@ -714,6 +721,116 @@ func TestBatchInserter_Flush_afterStop(t *testing.T) {
 
 	err := b.Flush(context.Background())
 	assert.ErrorIs(t, err, ErrStopped)
+}
+
+// TestBatchInserter_sizeFlushResetsTicker verifies that a size-triggered flush
+// resets the interval ticker, so the next interval flush is one full
+// FlushInterval away from the size flush rather than firing on the original
+// schedule that was already close to elapsing.
+func TestBatchInserter_sizeFlushResetsTicker(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		batch := &mockBatch{}
+		conn := &mockConn{batch: batch}
+		cfg := &BatchInserterConfig[testRow]{
+			MaxBatchSize:  2,
+			FlushInterval: 5 * time.Second,
+			ChannelBuffer: 2,
+		}
+		b := newTestInserter(t, conn, cfg)
+		b.Start(t.Context())
+
+		// Advance to 1s before the original tick.
+		time.Sleep(4 * time.Second)
+		synctest.Wait()
+
+		// Two submits trigger a size flush, which resets the ticker.
+		require.NoError(t, b.Submit(t.Context(), testRow{Value: 1}))
+		require.NoError(t, b.Submit(t.Context(), testRow{Value: 2}))
+		synctest.Wait()
+		require.Equal(t, int32(1), batch.sendCount.Load(), "size flush did not happen")
+
+		require.NoError(t, b.Submit(t.Context(), testRow{Value: 3}))
+
+		// Without the reset, the original ticker would fire at t=5s
+		// (1s from now). With the reset, next tick is ~5s from the size flush.
+		time.Sleep(2 * time.Second)
+		synctest.Wait()
+		assert.Equal(t, int32(1), batch.sendCount.Load(), "ticker fired before reset interval elapsed")
+
+		// Sleep past the reset interval.
+		time.Sleep(4 * time.Second)
+		synctest.Wait()
+		assert.Equal(t, int32(2), batch.sendCount.Load(), "ticker did not fire after reset interval")
+
+		require.NoError(t, b.Stop(t.Context()))
+	})
+}
+
+// TestBatchInserter_manualFlushResetsTicker verifies that a manual Flush call
+// resets the interval ticker.
+func TestBatchInserter_manualFlushResetsTicker(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		batch := &mockBatch{}
+		conn := &mockConn{batch: batch}
+		cfg := &BatchInserterConfig[testRow]{
+			MaxBatchSize:  100,
+			FlushInterval: 5 * time.Second,
+		}
+		b := newTestInserter(t, conn, cfg)
+		b.Start(t.Context())
+
+		// Advance to 1s before the original tick.
+		time.Sleep(4 * time.Second)
+		synctest.Wait()
+
+		require.NoError(t, b.Submit(t.Context(), testRow{Value: 1}))
+		require.NoError(t, b.Flush(t.Context()))
+		require.Equal(t, int32(1), batch.sendCount.Load())
+
+		require.NoError(t, b.Submit(t.Context(), testRow{Value: 2}))
+
+		// Without the reset, the original ticker would fire at t=5s
+		// (1s from now). With the reset, next tick is ~5s from the manual flush.
+		time.Sleep(2 * time.Second)
+		synctest.Wait()
+		assert.Equal(t, int32(1), batch.sendCount.Load(), "ticker fired before reset interval elapsed")
+
+		time.Sleep(4 * time.Second)
+		synctest.Wait()
+		assert.Equal(t, int32(2), batch.sendCount.Load(), "ticker did not fire after reset interval")
+
+		require.NoError(t, b.Stop(t.Context()))
+	})
+}
+
+// TestBatchInserter_intervalTicksPeriodically verifies the ticker fires
+// repeatedly across multiple FlushInterval boundaries, not just once.
+func TestBatchInserter_intervalTicksPeriodically(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		batch := &mockBatch{}
+		conn := &mockConn{batch: batch}
+		cfg := &BatchInserterConfig[testRow]{
+			MaxBatchSize:  100,
+			FlushInterval: 5 * time.Second,
+		}
+		b := newTestInserter(t, conn, cfg)
+		b.Start(t.Context())
+
+		for i := range 3 {
+			require.NoError(t, b.Submit(t.Context(), testRow{Value: i}))
+			time.Sleep(5 * time.Second)
+			synctest.Wait()
+		}
+
+		// Read the count via the atomic before Stop — Stop's drain might
+		// trigger an additional empty flush attempt (no Send), but reading
+		// the atomic is race-free regardless.
+		got := batch.sendCount.Load()
+
+		require.NoError(t, b.Stop(t.Context()))
+
+		assert.Equal(t, int32(3), got, "expected 3 interval flushes")
+	})
 }
 
 func TestBatchInserter_channelBufferLargerThanBatchSize(t *testing.T) {

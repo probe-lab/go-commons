@@ -222,15 +222,20 @@ func (b *BatchInserter[T]) run(ctx context.Context) {
 		select {
 		case row := <-b.rowCh:
 			b.buf = append(b.buf, row)
-			if len(b.buf) >= b.cfg.MaxBatchSize {
-				_ = b.doFlush(ctx, "size") // error logged and forwarded via OnDroppedRows
+			if len(b.buf) < b.cfg.MaxBatchSize {
+				continue
 			}
+
+			_ = b.doFlush(ctx, "size") // error logged and forwarded via OnDroppedRows
+			ticker.Reset(b.cfg.FlushInterval)
 
 		case <-ticker.C:
 			_ = b.doFlush(ctx, "interval") // error logged and forwarded via OnDroppedRows
+			ticker.Reset(b.cfg.FlushInterval)
 
 		case resp := <-b.flushCh:
 			resp <- b.doFlush(ctx, "manual")
+			ticker.Reset(b.cfg.FlushInterval)
 
 		case <-b.stopCh:
 			b.drain(<-b.stopCtxCh)
