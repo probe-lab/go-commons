@@ -54,6 +54,7 @@ func ServeMetrics(cfg *MetricsConfig) (func(ctx context.Context) error, error) {
 	mux := http.NewServeMux()
 
 	mux.Handle(cfg.Path, promhttp.Handler())
+	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
@@ -85,6 +86,12 @@ func ServeMetrics(cfg *MetricsConfig) (func(ctx context.Context) error, error) {
 	}
 
 	return shutdownFunc, nil
+}
+
+func healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 func initMeterProvider(name string) (metric.MeterProvider, func(ctx context.Context) error, error) {
