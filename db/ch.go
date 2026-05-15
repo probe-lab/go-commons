@@ -268,7 +268,7 @@ func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations
 		DatabaseName:          opt.Auth.Database,
 		ClusterName:           cfg.ClusterName,
 		MigrationsTable:       cfg.MigrationsTable,
-		MigrationsTableEngine: cfg.MigrationsTableEngine,
+		MigrationsTableEngine: "MergeTree",
 		MultiStatementEnabled: cfg.MultiStatementEnabled,
 		MultiStatementMaxSize: cfg.MultiStatementMaxSize,
 	})
