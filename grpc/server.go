@@ -14,6 +14,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -75,13 +77,21 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	loggingOpts := append([]logging.Option{
 		logging.WithLogOnEvents(logging.FinishCall),
 		logging.WithDisableLoggingFields(logging.ServiceFieldKey, logging.ComponentFieldKey, logging.MethodTypeFieldKey),
+		logging.WithFieldsFromContext(func(ctx context.Context) logging.Fields {
+			if sc := trace.SpanContextFromContext(ctx); sc.IsValid() {
+				return logging.Fields{"trace_id", sc.TraceID().String()}
+			}
+			return nil
+		}),
 	}, cfg.LogOpts...)
 
 	recoverOpt := recoverInterceptor()
 
 	// Create a new gRPC server
 	server := grpc.NewServer(
-		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.StatsHandler(otelgrpc.NewServerHandler(
+			otelgrpc.WithPropagators(propagation.TraceContext{}),
+		)),
 		grpc.ChainUnaryInterceptor(
 			logging.UnaryServerInterceptor(loggerInterceptor(), loggingOpts...),
 			recovery.UnaryServerInterceptor(recoverOpt),
