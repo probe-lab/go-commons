@@ -7,6 +7,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -22,6 +23,11 @@ func DefaultTraceConfig() *TraceConfig {
 }
 
 func InitTraceProvider(ctx context.Context, name string, cfg *TraceConfig) (func(ctx context.Context) error, error) {
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
 	if !cfg.Enabled {
 		provider := noop.NewTracerProvider()
 		otel.SetTracerProvider(provider)
