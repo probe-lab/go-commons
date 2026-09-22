@@ -25,6 +25,7 @@ type MetricsConfig struct {
 	Port    int
 	Path    string
 	Name    string
+	Version string
 }
 
 func DefaultMetricsConfig(name string) *MetricsConfig {
@@ -44,7 +45,7 @@ func ServeMetrics(cfg *MetricsConfig) (func(ctx context.Context) error, error) {
 		return func(ctx context.Context) error { return nil }, nil
 	}
 
-	provider, providerShutdownFn, err := initMeterProvider(cfg.Name)
+	provider, providerShutdownFn, err := initMeterProvider(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("new meter provider: %w", err)
 	}
@@ -94,7 +95,7 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
-func initMeterProvider(name string) (metric.MeterProvider, func(ctx context.Context) error, error) {
+func initMeterProvider(cfg *MetricsConfig) (metric.MeterProvider, func(ctx context.Context) error, error) {
 	// initialize AWS Elastic Container Service collector and register it with
 	// the default prometheus registry. If we are not running in a prometheus
 	// environment, don't do anything.
@@ -108,13 +109,13 @@ func initMeterProvider(name string) (metric.MeterProvider, func(ctx context.Cont
 	}
 
 	// initialize the prometheus exporter
-	exporter, err := promexp.New(promexp.WithNamespace(name))
+	exporter, err := promexp.New(promexp.WithNamespace(cfg.Name))
 	if err != nil {
 		return nil, nil, fmt.Errorf("new prometheus exporter: %w", err)
 	}
 
 	// build common resource information
-	res, err := newResource(name)
+	res, err := newResource(cfg.Name, cfg.Version)
 	if err != nil {
 		return nil, nil, fmt.Errorf("new metrics resource: %w", err)
 	}

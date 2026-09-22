@@ -66,6 +66,8 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 	} else {
 		cmd.Version += "-" + shortCommit
 	}
+	cfg.Metrics.Version = cmd.Version
+	cfg.Trace.Version = cmd.Version
 
 	cmd.Flags = append(cmd.Flags, []cli.Flag{
 		&cli.StringFlag{
