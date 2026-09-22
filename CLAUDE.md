@@ -45,6 +45,8 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 - Supports both single and multi-database configurations
 
 **http/**: HTTP utilities
+- `http/client.go`: HTTP client with one user agent, timeout, body size cap, redirect cap, and optional global rate limit; `ClientConfig` has `Validate()`, the transport is wrapped by otelhttp for traces and metrics
+- `http/server.go`: `ListenAndServe(ctx, srv, grace)` binds first, serves, and shuts down gracefully when the context ends
 - `http/resp.go`: Standardized JSON response structures with error handling
 - `http/io.go`: HTTP I/O utilities
 - `http/mw.go`: HTTP middleware components
@@ -55,7 +57,7 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 
 **tele/**: Telemetry and observability
 - `tele/tele.go`: OpenTelemetry resource creation
-- `tele/metrics.go`: Prometheus metrics configuration and serving
+- `tele/metrics.go`: Prometheus metrics configuration and serving on the default registry (scrape only; `Version` on the resource; binds before registering anything so a taken port is an error)
 - `tele/traces.go`: Distributed tracing setup with OTLP export
 
 **grpc/**: gRPC server utilities
