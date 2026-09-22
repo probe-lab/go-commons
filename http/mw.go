@@ -172,24 +172,24 @@ func MiddlewareLogging(next http.Handler) http.Handler {
 }
 
 func MiddlewareMetric(provider metric.MeterProvider) Middleware {
-	meter := provider.Meter("atlas")
+	meter := provider.Meter(meterName)
 
 	requestCount, err := meter.Int64Counter("requests")
 	if err != nil {
 		panic(fmt.Errorf("init requests int64 counter: %w", err))
 	}
 
-	inflight, err := meter.Int64Gauge("in_flight")
+	inflight, err := meter.Int64UpDownCounter("in_flight")
 	if err != nil {
-		panic(fmt.Errorf("init in_flight int64 counter: %w", err))
+		panic(fmt.Errorf("init in_flight int64 up down counter: %w", err))
 	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			inflight.Record(ctx, 1)
-			defer inflight.Record(ctx, -1)
+			inflight.Add(ctx, 1)
+			defer inflight.Add(ctx, -1)
 
 			wrapped, err := WrapResponseWriter(rw)
 			if err != nil {
