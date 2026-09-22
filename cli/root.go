@@ -284,24 +284,22 @@ func signalContext(ctx context.Context, signals ...os.Signal) (context.Context, 
 func debugPrintEnvVars() {
 	slog.Debug("Environment variables:")
 	for _, kv := range os.Environ() {
-		parts := strings.Split(kv, "=")
-		if len(parts) != 2 {
-			slog.Debug(kv)
-			continue
-		}
-
-		if !strings.Contains(strings.ToLower(parts[0]), "password") {
-			slog.Debug(kv)
-			continue
-		}
-
-		redacted := "*****"
-		if parts[1] == "" {
-			redacted = ""
-		}
-
-		slog.Debug(strings.Join([]string{parts[0], redacted}, "="))
+		slog.Debug(redactEnvVar(kv))
 	}
+}
+
+// redactEnvVar hides the value of a KEY=VALUE pair whose key contains
+// "password". Values may themselves contain "=", so the pair is split at
+// the first one only.
+func redactEnvVar(kv string) string {
+	key, value, ok := strings.Cut(kv, "=")
+	if !ok || !strings.Contains(strings.ToLower(key), "password") {
+		return kv
+	}
+	if value == "" {
+		return key + "="
+	}
+	return key + "=*****"
 }
 
 func buildEnvPrefix(name string) string {
@@ -334,11 +332,8 @@ func buildInfo() *BuildInfo {
 				bi.Commit = setting.Value
 
 			case "vcs.modified":
-				dirty, err := strconv.ParseBool(setting.Value)
-				if err != nil {
-					panic(err)
-				}
-				bi.Dirty = dirty
+				// An unparsable value counts as a clean tree.
+				bi.Dirty, _ = strconv.ParseBool(setting.Value)
 			}
 		}
 	}
