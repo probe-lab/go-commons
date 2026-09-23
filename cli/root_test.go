@@ -31,6 +31,24 @@ func TestNewRootCommand(t *testing.T) {
 	require.Equal(t, "debug", cfg.Log.Level)
 }
 
+func TestTracingFlags(t *testing.T) {
+	cmd := &cli.Command{
+		Name:   "app",
+		Action: func(context.Context, *cli.Command) error { return nil },
+	}
+	root, cfg := NewRootCommand(cmd)
+
+	t.Setenv("APP_TRACING_ENDPOINT", "collector:4317")
+	t.Setenv("APP_TRACING_HEADERS", "authorization=Bearer x,x-tenant=y")
+
+	// tracing stays disabled so the run does not connect anywhere
+	err := root.RunWithContextAndArgs(context.Background(), []string{"app", "--tracing.insecure"})
+	require.NoError(t, err)
+	require.Equal(t, "collector:4317", cfg.Trace.Endpoint)
+	require.True(t, cfg.Trace.Insecure)
+	require.Equal(t, map[string]string{"authorization": "Bearer x", "x-tenant": "y"}, cfg.Trace.Headers)
+}
+
 func TestRedactEnvVar(t *testing.T) {
 	require.Equal(t, "HOME=/root", redactEnvVar("HOME=/root"))
 	require.Equal(t, "DB_PASSWORD=*****", redactEnvVar("DB_PASSWORD=secret"))
