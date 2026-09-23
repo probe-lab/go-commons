@@ -56,14 +56,18 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		tracesShutdown:  func(ctx context.Context) error { return nil },
 	}
 
+	// A binary built with `go run` or outside a checkout carries no VCS
+	// stamp; then the version stays as the command declared it.
 	shortCommit := cfg.BuildInfo.ShortCommit()
-	if cfg.BuildInfo.Dirty {
+	if shortCommit != "" && cfg.BuildInfo.Dirty {
 		shortCommit += "+dirty"
 	}
 
-	if cmd.Version == "" {
+	switch {
+	case shortCommit == "":
+	case cmd.Version == "":
 		cmd.Version = shortCommit
-	} else {
+	default:
 		cmd.Version += "-" + shortCommit
 	}
 	cfg.Metrics.Version = cmd.Version

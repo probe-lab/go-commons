@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,8 @@ func TestNewRootCommand(t *testing.T) {
 
 	root, cfg := NewRootCommand(cmd)
 	require.Equal(t, "APP_", cfg.EnvPrefix)
-	require.True(t, len(cmd.Version) >= len("1.2.3"), "the commit is appended to the version")
+	require.True(t, strings.HasPrefix(cmd.Version, "1.2.3"), "the version keeps what the command declared")
+	require.NotEqual(t, "1.2.3-", cmd.Version, "no dangling separator without a commit")
 	require.Equal(t, cmd.Version, cfg.Metrics.Version, "the metrics resource carries the command version")
 	require.Equal(t, cmd.Version, cfg.Trace.Version, "the trace resource carries the command version")
 
