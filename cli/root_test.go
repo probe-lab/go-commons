@@ -78,3 +78,30 @@ func TestTracingFlagsReadCanonicalEnv(t *testing.T) {
 	t.Setenv("APP_TRACING_ENDPOINT", "app:4317")
 	require.Equal(t, "app:4317", run(t).Trace.Endpoint)
 }
+
+func TestMetricsFlagsReadCanonicalEnv(t *testing.T) {
+	run := func(t *testing.T) *RootCommandConfig {
+		t.Helper()
+		cmd := &cli.Command{
+			Name:   "app",
+			Action: func(context.Context, *cli.Command) error { return nil },
+		}
+		root, cfg := NewRootCommand(cmd)
+		require.NoError(t, root.RunWithContextAndArgs(context.Background(), []string{"app"}))
+		return cfg
+	}
+
+	cfg := run(t)
+	require.Equal(t, "localhost", cfg.Metrics.Host)
+	require.Equal(t, 6060, cfg.Metrics.Port, "the default stays even though the spec says 9464")
+
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_HOST", "0.0.0.0")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
+	cfg = run(t)
+	require.Equal(t, "0.0.0.0", cfg.Metrics.Host)
+	require.Equal(t, 9464, cfg.Metrics.Port)
+
+	// the application's own variable wins
+	t.Setenv("APP_METRICS_PORT", "7070")
+	require.Equal(t, 7070, run(t).Metrics.Port)
+}

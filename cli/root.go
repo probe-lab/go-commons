@@ -104,7 +104,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		},
 		&cli.StringFlag{
 			Name:        "metrics.host",
-			Sources:     cli.EnvVars(cfg.EnvPrefix + "METRICS_HOST"),
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_HOST", "OTEL_EXPORTER_PROMETHEUS_HOST"),
 			Usage:       "Which network interface should the metrics endpoint bind to",
 			Value:       cfg.Metrics.Host,
 			Destination: &cfg.Metrics.Host,
@@ -112,7 +112,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		},
 		&cli.IntFlag{
 			Name:        "metrics.port",
-			Sources:     cli.EnvVars(cfg.EnvPrefix + "METRICS_PORT"),
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_PORT", "OTEL_EXPORTER_PROMETHEUS_PORT"),
 			Usage:       "On which port should the metrics endpoint listen",
 			Value:       cfg.Metrics.Port,
 			Destination: &cfg.Metrics.Port,
