@@ -57,7 +57,7 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 
 **tele/**: Telemetry and observability
 - `tele/metrics.go`: Prometheus metrics configuration and serving on the default registry (scrape only; `Version` on the resource; binds before registering anything so a taken port is an error)
-- `tele/traces.go`: Distributed tracing setup with OTLP gRPC export; `TraceConfig` (`Endpoint`, `Insecure`, `Headers`, `Validate()`) overrides the canonical `OTEL_EXPORTER_OTLP_*` variables field by field, unset fields fall back to them; the sampler follows `OTEL_TRACES_SAMPLER`
+- `tele/traces.go`: Distributed tracing setup with OTLP gRPC export; `TraceConfig` (`Endpoint`, `Insecure`, `Headers`, `Validate()`); the `--tracing.*` root flags read `<NAME>_TRACING_*`, then `OTEL_EXPORTER_OTLP_TRACES_*`, then `OTEL_EXPORTER_OTLP_*`; the sampler follows `OTEL_TRACES_SAMPLER`
 - `tele/tele.go`: OpenTelemetry resource creation; includes `OTEL_RESOURCE_ATTRIBUTES`, the service name and version given in code win
 
 **grpc/**: gRPC server utilities

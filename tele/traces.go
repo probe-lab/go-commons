@@ -15,11 +15,12 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-// TraceConfig configures the OTLP gRPC trace exporter. A zero field leaves
-// the choice to the canonical OpenTelemetry environment variables
-// (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_INSECURE,
-// OTEL_EXPORTER_OTLP_HEADERS, OTEL_TRACES_SAMPLER, ...) and their defaults.
-// A field that is set takes precedence over the environment.
+// TraceConfig configures the OTLP gRPC trace exporter. The cli root command
+// fills it from the --tracing.* flags, which read the application's own
+// environment variables and the canonical OTEL_EXPORTER_OTLP_* ones. A zero
+// field passes no option to the exporter, which then applies its own
+// defaults. The sampler is not configured here; the SDK reads
+// OTEL_TRACES_SAMPLER.
 type TraceConfig struct {
 	// Enabled turns tracing on. Without it a no-op provider is installed.
 	Enabled bool
@@ -74,10 +75,9 @@ func isURL(s string) bool {
 }
 
 // InitTraceProvider installs the W3C propagators and, when cfg is enabled,
-// a tracer provider that exports spans over OTLP gRPC. Exporter options
-// come from cfg where set and from the OTEL_EXPORTER_OTLP_* environment
-// otherwise. The sampler is the SDK default (parent based, sample all)
-// unless OTEL_TRACES_SAMPLER says otherwise.
+// a tracer provider that exports spans over OTLP gRPC. The sampler is the
+// SDK default (parent based, sample all) unless OTEL_TRACES_SAMPLER says
+// otherwise.
 func InitTraceProvider(ctx context.Context, name string, cfg *TraceConfig) (func(ctx context.Context) error, error) {
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
@@ -121,8 +121,7 @@ func InitTraceProvider(ctx context.Context, name string, cfg *TraceConfig) (func
 }
 
 // exporterOptions translates the set fields of cfg into exporter options.
-// Unset fields produce no option, so the exporter falls back to the
-// environment for them.
+// Unset fields produce no option and keep the exporter's defaults.
 func exporterOptions(cfg *TraceConfig) []otlptracegrpc.Option {
 	var opts []otlptracegrpc.Option
 
