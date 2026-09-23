@@ -56,7 +56,7 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 - `log/handlers.go`: Custom log handlers with context enrichment
 
 **tele/**: Telemetry and observability
-- `tele/metrics.go`: Prometheus metrics configuration and serving on the default registry (scrape only; `Version` on the resource; binds before registering anything so a taken port is an error)
+- `tele/metrics.go`: Prometheus metrics configuration and serving on the default registry (scrape only; `Version` on the resource; binds before registering anything so a taken port is an error); the `--metrics.host` and `--metrics.port` root flags also read `OTEL_EXPORTER_PROMETHEUS_HOST` and `OTEL_EXPORTER_PROMETHEUS_PORT` after `<NAME>_METRICS_*`
 - `tele/traces.go`: Distributed tracing setup with OTLP gRPC export; `TraceConfig` (`Endpoint`, `Insecure`, `Headers`, `Validate()`); the `--tracing.*` root flags read `<NAME>_TRACING_*`, then `OTEL_EXPORTER_OTLP_TRACES_*`, then `OTEL_EXPORTER_OTLP_*`; the sampler follows `OTEL_TRACES_SAMPLER`
 - `tele/tele.go`: OpenTelemetry resource creation; includes `OTEL_RESOURCE_ATTRIBUTES`, the service name and version given in code win
 
