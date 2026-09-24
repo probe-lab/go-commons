@@ -85,7 +85,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		&cli.StringFlag{
 			Name:        "log.format",
 			Sources:     cli.EnvVars(cfg.EnvPrefix + "LOG_FORMAT"),
-			Usage:       "Sets the format to output the log statements in: text, json",
+			Usage:       "Sets the format to output the log statements in: console, text, json",
 			Destination: &cfg.Log.Format,
 			Value:       cfg.Log.Format,
 			Category:    flagCategoryLogging,
