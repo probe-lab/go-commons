@@ -7,6 +7,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
+	github.com/lmittmann/tint v1.0.6
 	github.com/multiformats/go-multiaddr v0.16.1
 	github.com/probe-lab/ecs-exporter v0.0.0-20251009122906-1f6d80d91fa1
 	github.com/prometheus/client_golang v1.23.2

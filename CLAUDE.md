@@ -52,7 +52,7 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 - `http/mw.go`: HTTP middleware components
 
 **log/**: Structured logging
-- `log/log.go`: slog-based structured logging with text/JSON output formats
+- `log/log.go`: slog-based structured logging; `--log.format` is `console` (default; one line per record with the level in color when stderr is a terminal and `NO_COLOR` is unset), `text`, or `json`; `Config` has `Validate()`
 - `log/handlers.go`: Custom log handlers with context enrichment
 
 **tele/**: Telemetry and observability
