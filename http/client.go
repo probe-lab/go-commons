@@ -7,12 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
+	"github.com/probe-lab/go-commons/log"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/time/rate"
 )
@@ -151,7 +154,21 @@ type ClientRequest struct {
 	Accept string
 	// Header holds extra headers added to the request.
 	Header http.Header
+	// Retries is how many more attempts Do makes after a network error or
+	// a 5xx response, waiting retryBase, then twice that, and so on,
+	// between them. Zero makes a single attempt.
+	Retries int
 }
+
+// retryBase is the wait before the first retry; each further retry waits
+// twice as long, up to retryMax.
+var (
+	retryBase = time.Second
+	retryMax  = 30 * time.Second
+)
+
+// jsonAccept is the Accept header GetJSON and DoJSON send.
+const jsonAccept = "application/json, */*;q=0.5"
 
 // ClientResponse is the part of an HTTP response most callers care about.
 type ClientResponse struct {
@@ -210,20 +227,62 @@ func (c *Client) Get(ctx context.Context, url, accept string) (*ClientResponse, 
 // GetJSON fetches url and decodes the body into v. It accepts any body that
 // parses as JSON, whatever the Content-Type says.
 func (c *Client) GetJSON(ctx context.Context, url string, v any) (*ClientResponse, error) {
-	res, err := c.Get(ctx, url, "application/json, */*;q=0.5")
+	return c.DoJSON(ctx, ClientRequest{Method: http.MethodGet, URL: url}, v)
+}
+
+// DoJSON sends the request and decodes the body into v. It accepts any body
+// that parses as JSON, whatever the Content-Type says. An empty Accept asks
+// for JSON.
+func (c *Client) DoJSON(ctx context.Context, r ClientRequest, v any) (*ClientResponse, error) {
+	if r.Accept == "" {
+		r.Accept = jsonAccept
+	}
+	res, err := c.Do(ctx, r)
 	if err != nil {
 		return res, err
 	}
 	if err := json.Unmarshal(res.Body, v); err != nil {
-		return res, fmt.Errorf("decode %s: %w", url, err)
+		return res, fmt.Errorf("decode %s: %w", r.URL, err)
 	}
 	return res, nil
 }
 
 // Do sends the request and returns the body, capped at the configured size.
 // Non-2xx responses return a *StatusError together with the ClientResponse,
-// so callers can read the status and headers.
+// so callers can read the status and headers. With Retries set, a network
+// error or a 5xx response is tried again after a growing wait.
 func (c *Client) Do(ctx context.Context, r ClientRequest) (*ClientResponse, error) {
+	for attempt := 0; ; attempt++ {
+		res, err := c.do(ctx, r)
+		if attempt >= r.Retries || !retryable(err) || ctx.Err() != nil {
+			return res, err
+		}
+
+		delay := min(retryBase<<attempt, retryMax)
+		slog.Debug("Retrying", "url", r.URL, "attempt", attempt+1, "delay", delay, "err", err)
+
+		select {
+		case <-ctx.Done():
+			return res, err
+		case <-time.After(delay):
+		}
+	}
+}
+
+// retryable reports whether err is a network error or a 5xx response, the
+// failures that a later attempt may not repeat.
+func retryable(err error) bool {
+	var se *StatusError
+	if errors.As(err, &se) {
+		return se.StatusCode >= 500
+	}
+
+	var ue *url.Error
+	var ne net.Error
+	return errors.As(err, &ue) || errors.As(err, &ne)
+}
+
+func (c *Client) do(ctx context.Context, r ClientRequest) (*ClientResponse, error) {
 	method := r.Method
 	if method == "" {
 		method = http.MethodGet
@@ -251,13 +310,16 @@ func (c *Client) Do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 			req.Header.Add(k, v)
 		}
 	}
+	start := time.Now()
 	res, err := c.hc.Do(req)
 	if err != nil {
+		logRequest(method, r.URL, start, 0, 0, err)
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer log.Defer(res.Body.Close, "failed to close response body")
 
 	data, err := io.ReadAll(io.LimitReader(res.Body, c.maxBody+1))
+	logRequest(method, r.URL, start, res.StatusCode, len(data), err)
 	if err != nil {
 		return nil, fmt.Errorf("read body of %s: %w", r.URL, err)
 	}
@@ -276,6 +338,22 @@ func (c *Client) Do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 		return out, &StatusError{URL: r.URL, StatusCode: res.StatusCode, ContentType: out.ContentType}
 	}
 	return out, nil
+}
+
+// logRequest writes one debug line per request, mirroring the "Served" line
+// of the server middleware. Status and size are left out when the request
+// did not get a response.
+func logRequest(method, url string, start time.Time, status, size int, err error) {
+	logEntry := slog.With("method", method, "url", url, "time", time.Since(start))
+	if status != 0 {
+		logEntry = logEntry.With("status", status, "size", size)
+	}
+
+	if err != nil {
+		logEntry = logEntry.With("err", err)
+	}
+
+	logEntry.Debug("Requested")
 }
 
 func mediaType(ct string) string {

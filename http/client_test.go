@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -141,4 +142,46 @@ func TestClientWaitHonoursContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	require.Error(t, c.Wait(ctx), "the second one has to wait and sees the cancelled context")
+}
+
+func TestClientRetriesTransientFailures(t *testing.T) {
+	retryBase = time.Millisecond
+	t.Cleanup(func() { retryBase = time.Second })
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		if calls < 3 {
+			w.WriteHeader(http.StatusBadGateway)
+			return
+		}
+		_, _ = w.Write([]byte(`{"name":"x"}`))
+	}))
+	defer srv.Close()
+
+	c := newClient(t, DefaultClientConfig())
+
+	var v struct{ Name string }
+	_, err := c.DoJSON(context.Background(), ClientRequest{URL: srv.URL, Retries: 3}, &v)
+	require.NoError(t, err)
+	require.Equal(t, "x", v.Name)
+	require.Equal(t, 3, calls)
+
+	// A 4xx is not retried.
+	calls = 0
+	srv404 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv404.Close()
+
+	_, err = c.Do(context.Background(), ClientRequest{URL: srv404.URL, Retries: 3})
+	require.True(t, IsNotFound(err))
+	require.Equal(t, 1, calls)
+
+	// Without Retries the first 5xx is returned.
+	calls = 0
+	_, err = c.Do(context.Background(), ClientRequest{URL: srv.URL})
+	require.Error(t, err)
+	require.Equal(t, 1, calls)
 }
