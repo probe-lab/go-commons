@@ -309,29 +309,6 @@ func signalContext(ctx context.Context, signals ...os.Signal) (context.Context, 
 	return ctx, cancel
 }
 
-// debugPrintEnvVars logs all environment variables at debug level.
-// Redacts values of variables containing the string "password".
-func debugPrintEnvVars() {
-	slog.Debug("Environment variables:")
-	for _, kv := range os.Environ() {
-		slog.Debug(redactEnvVar(kv))
-	}
-}
-
-// redactEnvVar hides the value of a KEY=VALUE pair whose key contains
-// "password". Values may themselves contain "=", so the pair is split at
-// the first one only.
-func redactEnvVar(kv string) string {
-	key, value, ok := strings.Cut(kv, "=")
-	if !ok || !strings.Contains(strings.ToLower(key), "password") {
-		return kv
-	}
-	if value == "" {
-		return key + "="
-	}
-	return key + "=*****"
-}
-
 func buildEnvPrefix(name string) string {
 	prefix := strings.ToUpper(name)
 	if !strings.HasSuffix(prefix, "_") {
