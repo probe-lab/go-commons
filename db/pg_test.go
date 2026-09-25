@@ -107,6 +107,9 @@ func TestPostgresBaseConfig_Validate(t *testing.T) {
 func TestPostgresConfig_Options(t *testing.T) {
 	cfg := validPostgresCfgFn()
 	assert.Equal(t, "host=localhost port=9440 dbname=database user=default password=password sslmode=require", cfg.SourceName())
+
+	cfg.BaseConfig.Pass = ""
+	assert.Equal(t, "host=localhost port=9440 dbname=database user=default sslmode=require", cfg.SourceName())
 }
 
 func TestPostgresConfig_Validate(t *testing.T) {
