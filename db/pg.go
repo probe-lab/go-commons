@@ -64,16 +64,55 @@ func (cfg *PostgresConfig) Validate() error {
 	return cfg.BaseConfig.Validate()
 }
 
+// SourceName returns the keyword/value connection string. The password pair
+// is left out when the password is empty, so a server with trust
+// authentication works without one.
 func (cfg *PostgresConfig) SourceName() string {
-	return fmt.Sprintf(
-		"host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
-		cfg.BaseConfig.Host,
-		cfg.BaseConfig.Port,
-		cfg.Database,
-		cfg.BaseConfig.User,
-		cfg.BaseConfig.Pass,
-		cfg.BaseConfig.SSLMode,
+	parts := []string{
+		"host=" + cfg.BaseConfig.Host,
+		fmt.Sprintf("port=%d", cfg.BaseConfig.Port),
+		"dbname=" + cfg.Database,
+		"user=" + cfg.BaseConfig.User,
+	}
+
+	if cfg.BaseConfig.Pass != "" {
+		parts = append(parts, "password="+cfg.BaseConfig.Pass)
+	}
+
+	parts = append(parts, "sslmode="+cfg.BaseConfig.SSLMode)
+
+	return strings.Join(parts, " ")
+}
+
+// OpenAndPing opens the database with the given database/sql driver name,
+// wraps the handle with OpenTelemetry instrumentation, and pings it. The
+// caller registers the driver: "postgres" for lib/pq, "pgx" for the stdlib
+// package of pgx.
+func (cfg *PostgresConfig) OpenAndPing(ctx context.Context, driverName string) (*sql.DB, error) {
+	slog.Info("Initializing database handle",
+		"driver", driverName,
+		"host", cfg.BaseConfig.Host,
+		"port", cfg.BaseConfig.Port,
+		"user", cfg.BaseConfig.User,
+		"ssl", cfg.BaseConfig.SSLMode,
+		"database", cfg.Database,
 	)
+
+	handle, err := otelsql.Open(driverName, cfg.SourceName(),
+		otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("opening %s database: %w", cfg.Database, err)
+	}
+
+	otelsql.ReportDBStatsMetrics(handle)
+
+	if err = handle.PingContext(ctx); err != nil {
+		_ = handle.Close()
+		return nil, fmt.Errorf("pinging database: %w", err)
+	}
+
+	return handle, nil
 }
 
 type PostgresMultiConfig struct {
@@ -115,21 +154,12 @@ func (cfg *PostgresMultiConfig) OpenAndPing(ctx context.Context) ([]*sql.DB, err
 			Database:   database,
 		}
 
-		handle, err := otelsql.Open("postgres", pgCfg.SourceName(),
-			otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
-		)
+		handle, err := pgCfg.OpenAndPing(ctx, "postgres")
 		if err != nil {
-			return handles, fmt.Errorf("opening %s database: %w", database, err)
+			return handles, err
 		}
-
-		otelsql.ReportDBStatsMetrics(handle)
 
 		handles[i] = handle
-
-		// Ping database to verify connection.
-		if err = handle.PingContext(ctx); err != nil {
-			return handles, fmt.Errorf("pinging database: %w", err)
-		}
 	}
 
 	return handles, nil

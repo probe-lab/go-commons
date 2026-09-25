@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -32,30 +33,58 @@ func SafePrintConfig(tag string, cfg any) {
 	slog.Info("config", "tag", tag, "config", string(dat))
 }
 
+// debugPrintEnvVars logs all environment variables at debug level, with the
+// same redaction as SafePrintConfig.
+func debugPrintEnvVars() {
+	slog.Debug("Environment variables:")
+	for _, kv := range os.Environ() {
+		slog.Debug(redactEnvVar(kv))
+	}
+}
+
+// redactEnvVar hides the secret in a KEY=VALUE pair. Values may themselves
+// contain "=", so the pair is split at the first one only.
+func redactEnvVar(kv string) string {
+	key, val, ok := strings.Cut(kv, "=")
+	if !ok {
+		return kv
+	}
+	return key + "=" + redactString(key, val)
+}
+
+// redactSecrets walks decoded JSON and hides secrets in place.
 func redactSecrets(v any) {
 	switch t := v.(type) {
 	case map[string]any:
 		for key, val := range t {
-			lower := strings.ToLower(key)
-			if strings.Contains(lower, "pass") || strings.Contains(lower, "secret") {
-				if s, ok := val.(string); ok {
-					t[key] = maskSecret(s)
-				} else {
-					t[key] = "***"
-				}
-				continue
-			}
 			if s, ok := val.(string); ok {
-				t[key] = redactURLCredentials(s)
-				continue
+				t[key] = redactString(key, s)
+			} else if isSecretKey(key) {
+				t[key] = "***"
+			} else {
+				redactSecrets(val)
 			}
-			redactSecrets(val)
 		}
 	case []any:
 		for _, val := range t {
 			redactSecrets(val)
 		}
 	}
+}
+
+// redactString returns val with its secret hidden: the whole value when key
+// names a secret, otherwise only the password of a URL embedded in it.
+func redactString(key, val string) string {
+	if isSecretKey(key) {
+		return maskSecret(val)
+	}
+	return redactURLCredentials(val)
+}
+
+// isSecretKey reports whether a field or variable name suggests a secret.
+func isSecretKey(key string) bool {
+	lower := strings.ToLower(key)
+	return strings.Contains(lower, "pass") || strings.Contains(lower, "secret")
 }
 
 func maskSecret(s string) string {

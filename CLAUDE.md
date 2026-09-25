@@ -45,18 +45,20 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 - Supports both single and multi-database configurations
 
 **http/**: HTTP utilities
+- `http/client.go`: HTTP client with one user agent, timeout, body size cap, redirect cap, and optional global rate limit; `ClientConfig` has `Validate()`, the transport is wrapped by otelhttp for traces and metrics
+- `http/server.go`: `ListenAndServe(ctx, srv, grace)` binds first, serves, and shuts down gracefully when the context ends
 - `http/resp.go`: Standardized JSON response structures with error handling
 - `http/io.go`: HTTP I/O utilities
 - `http/mw.go`: HTTP middleware components
 
 **log/**: Structured logging
-- `log/log.go`: slog-based structured logging with text/JSON output formats
+- `log/log.go`: slog-based structured logging; `--log.format` is `console` (default; one line per record with the level in color when stderr is a terminal and `NO_COLOR` is unset), `text`, or `json`; `Config` has `Validate()`
 - `log/handlers.go`: Custom log handlers with context enrichment
 
 **tele/**: Telemetry and observability
-- `tele/tele.go`: OpenTelemetry resource creation
-- `tele/metrics.go`: Prometheus metrics configuration and serving
-- `tele/traces.go`: Distributed tracing setup with OTLP export
+- `tele/metrics.go`: Prometheus metrics configuration and serving on the default registry (scrape only; `Version` on the resource; binds before registering anything so a taken port is an error); the `--metrics.host` and `--metrics.port` root flags also read `OTEL_EXPORTER_PROMETHEUS_HOST` and `OTEL_EXPORTER_PROMETHEUS_PORT` after `<NAME>_METRICS_*`
+- `tele/traces.go`: Distributed tracing setup with OTLP gRPC export; `TraceConfig` (`Endpoint`, `Insecure`, `Headers`, `Validate()`); the `--tracing.*` root flags read `<NAME>_TRACING_*`, then `OTEL_EXPORTER_OTLP_TRACES_*`, then `OTEL_EXPORTER_OTLP_*`; the sampler follows `OTEL_TRACES_SAMPLER`
+- `tele/tele.go`: OpenTelemetry resource creation; includes `OTEL_RESOURCE_ATTRIBUTES`, the service name and version given in code win
 
 **grpc/**: gRPC server utilities
 - `grpc/server.go`: gRPC server with OpenTelemetry, health checks, panic recovery, and rate limiting

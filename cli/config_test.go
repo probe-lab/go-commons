@@ -3,26 +3,22 @@ package cli
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func redactedJSON(t *testing.T, cfg any) map[string]any {
 	t.Helper()
 
 	dat, err := json.Marshal(cfg)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
+	require.NoError(t, err)
 
 	var generic any
-	if err := json.Unmarshal(dat, &generic); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
+	require.NoError(t, json.Unmarshal(dat, &generic))
 	redactSecrets(generic)
 
 	m, ok := generic.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map, got %T", generic)
-	}
+	require.True(t, ok, "expected map, got %T", generic)
 	return m
 }
 
@@ -35,9 +31,7 @@ func TestMaskSecret(t *testing.T) {
 		"mypassword": "my***",
 	}
 	for in, want := range cases {
-		if got := maskSecret(in); got != want {
-			t.Errorf("maskSecret(%q) = %q, want %q", in, got, want)
-		}
+		require.Equal(t, want, maskSecret(in), "maskSecret(%q)", in)
 	}
 }
 
@@ -48,27 +42,36 @@ func TestRedactSecrets(t *testing.T) {
 	cfg := struct {
 		User     string `json:"user"`
 		Password string `json:"password"`
+		Timeout  int    `json:"passTimeout"`
 		DSN      string `json:"dsn"`
 		Nested   nested `json:"nested"`
 	}{
 		User:     "alice",
 		Password: "mypassword",
+		Timeout:  5,
 		DSN:      "postgres://alice:mypassword@localhost:5432/db",
 		Nested:   nested{Secret: "topsecret"},
 	}
 
 	m := redactedJSON(t, cfg)
 
-	if m["user"] != "alice" {
-		t.Errorf("user should be untouched, got %v", m["user"])
+	require.Equal(t, "alice", m["user"])
+	require.Equal(t, "my***", m["password"])
+	require.Equal(t, "***", m["passTimeout"], "non-string secrets are hidden whole")
+	require.Equal(t, "postgres://alice:my***@localhost:5432/db", m["dsn"])
+	require.Equal(t, "to***", m["nested"].(map[string]any)["secret"])
+}
+
+func TestRedactEnvVar(t *testing.T) {
+	cases := map[string]string{
+		"HOME=/home/alice":                       "HOME=/home/alice",
+		"NOEQUALS":                               "NOEQUALS",
+		"PG_PASSWORD=mypassword":                 "PG_PASSWORD=my***",
+		"PG_PASSWORD=":                           "PG_PASSWORD=***",
+		"AWS_SECRET_ACCESS_KEY=abc=def":          "AWS_SECRET_ACCESS_KEY=ab***",
+		"DSN=postgres://alice:mypassword@db/app": "DSN=postgres://alice:my***@db/app",
 	}
-	if m["password"] != "my***" {
-		t.Errorf("password not masked, got %v", m["password"])
-	}
-	if got := m["dsn"]; got != "postgres://alice:my***@localhost:5432/db" {
-		t.Errorf("dsn credentials not masked, got %v", got)
-	}
-	if nm := m["nested"].(map[string]any); nm["secret"] != "to***" {
-		t.Errorf("nested secret not masked, got %v", nm["secret"])
+	for in, want := range cases {
+		require.Equal(t, want, redactEnvVar(in), "redactEnvVar(%q)", in)
 	}
 }

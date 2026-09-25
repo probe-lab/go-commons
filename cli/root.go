@@ -56,16 +56,22 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		tracesShutdown:  func(ctx context.Context) error { return nil },
 	}
 
+	// A binary built with `go run` or outside a checkout carries no VCS
+	// stamp; then the version stays as the command declared it.
 	shortCommit := cfg.BuildInfo.ShortCommit()
-	if cfg.BuildInfo.Dirty {
+	if shortCommit != "" && cfg.BuildInfo.Dirty {
 		shortCommit += "+dirty"
 	}
 
-	if cmd.Version == "" {
+	switch {
+	case shortCommit == "":
+	case cmd.Version == "":
 		cmd.Version = shortCommit
-	} else {
+	default:
 		cmd.Version += "-" + shortCommit
 	}
+	cfg.Metrics.Version = cmd.Version
+	cfg.Trace.Version = cmd.Version
 
 	cmd.Flags = append(cmd.Flags, []cli.Flag{
 		&cli.StringFlag{
@@ -79,7 +85,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		&cli.StringFlag{
 			Name:        "log.format",
 			Sources:     cli.EnvVars(cfg.EnvPrefix + "LOG_FORMAT"),
-			Usage:       "Sets the format to output the log statements in: text, json",
+			Usage:       "Sets the format to output the log statements in: console, text, json",
 			Destination: &cfg.Log.Format,
 			Value:       cfg.Log.Format,
 			Category:    flagCategoryLogging,
@@ -102,7 +108,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		},
 		&cli.StringFlag{
 			Name:        "metrics.host",
-			Sources:     cli.EnvVars(cfg.EnvPrefix + "METRICS_HOST"),
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_HOST", "OTEL_EXPORTER_PROMETHEUS_HOST"),
 			Usage:       "Which network interface should the metrics endpoint bind to",
 			Value:       cfg.Metrics.Host,
 			Destination: &cfg.Metrics.Host,
@@ -110,7 +116,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		},
 		&cli.IntFlag{
 			Name:        "metrics.port",
-			Sources:     cli.EnvVars(cfg.EnvPrefix + "METRICS_PORT"),
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_PORT", "OTEL_EXPORTER_PROMETHEUS_PORT"),
 			Usage:       "On which port should the metrics endpoint listen",
 			Value:       cfg.Metrics.Port,
 			Destination: &cfg.Metrics.Port,
@@ -130,6 +136,30 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 			Usage:       "Whether to emit trace data",
 			Destination: &cfg.Trace.Enabled,
 			Value:       cfg.Trace.Enabled,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.StringFlag{
+			Name:        "tracing.endpoint",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"TRACING_ENDPOINT", "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT"),
+			Usage:       "OTLP gRPC collector for traces as host:port or URL. Defaults to localhost:4317.",
+			Destination: &cfg.Trace.Endpoint,
+			Value:       cfg.Trace.Endpoint,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.BoolFlag{
+			Name:        "tracing.insecure",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"TRACING_INSECURE", "OTEL_EXPORTER_OTLP_TRACES_INSECURE", "OTEL_EXPORTER_OTLP_INSECURE"),
+			Usage:       "Send traces without TLS.",
+			Destination: &cfg.Trace.Insecure,
+			Value:       cfg.Trace.Insecure,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.StringMapFlag{
+			Name:        "tracing.headers",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"TRACING_HEADERS", "OTEL_EXPORTER_OTLP_TRACES_HEADERS", "OTEL_EXPORTER_OTLP_HEADERS"),
+			Usage:       "Headers sent with every trace export as key=value, comma separated.",
+			Destination: &cfg.Trace.Headers,
+			Value:       cfg.Trace.Headers,
 			Category:    flagCategoryTelemetry,
 		},
 		&cli.DurationFlag{
@@ -279,31 +309,6 @@ func signalContext(ctx context.Context, signals ...os.Signal) (context.Context, 
 	return ctx, cancel
 }
 
-// debugPrintEnvVars logs all environment variables at debug level.
-// Redacts values of variables containing the string "password".
-func debugPrintEnvVars() {
-	slog.Debug("Environment variables:")
-	for _, kv := range os.Environ() {
-		parts := strings.Split(kv, "=")
-		if len(parts) != 2 {
-			slog.Debug(kv)
-			continue
-		}
-
-		if !strings.Contains(strings.ToLower(parts[0]), "password") {
-			slog.Debug(kv)
-			continue
-		}
-
-		redacted := "*****"
-		if parts[1] == "" {
-			redacted = ""
-		}
-
-		slog.Debug(strings.Join([]string{parts[0], redacted}, "="))
-	}
-}
-
 func buildEnvPrefix(name string) string {
 	prefix := strings.ToUpper(name)
 	if !strings.HasSuffix(prefix, "_") {
@@ -334,11 +339,8 @@ func buildInfo() *BuildInfo {
 				bi.Commit = setting.Value
 
 			case "vcs.modified":
-				dirty, err := strconv.ParseBool(setting.Value)
-				if err != nil {
-					panic(err)
-				}
-				bi.Dirty = dirty
+				// An unparsable value counts as a clean tree.
+				bi.Dirty, _ = strconv.ParseBool(setting.Value)
 			}
 		}
 	}
