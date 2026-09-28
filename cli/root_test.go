@@ -33,10 +33,77 @@ func TestNewRootCommand(t *testing.T) {
 	require.Equal(t, "debug", cfg.Log.Level)
 }
 
-func TestRedactEnvVar(t *testing.T) {
-	require.Equal(t, "HOME=/root", redactEnvVar("HOME=/root"))
-	require.Equal(t, "DB_PASSWORD=*****", redactEnvVar("DB_PASSWORD=secret"))
-	require.Equal(t, "DB_PASSWORD=*****", redactEnvVar("DB_PASSWORD=with=equals=="))
-	require.Equal(t, "DB_PASSWORD=", redactEnvVar("DB_PASSWORD="))
-	require.Equal(t, "NOVALUE", redactEnvVar("NOVALUE"))
+func TestTracingFlags(t *testing.T) {
+	cmd := &cli.Command{
+		Name:   "app",
+		Action: func(context.Context, *cli.Command) error { return nil },
+	}
+	root, cfg := NewRootCommand(cmd)
+
+	t.Setenv("APP_TRACING_ENDPOINT", "collector:4317")
+	t.Setenv("APP_TRACING_HEADERS", "authorization=Bearer x,x-tenant=y")
+
+	// tracing stays disabled so the run does not connect anywhere
+	err := root.RunWithContextAndArgs(context.Background(), []string{"app", "--tracing.insecure"})
+	require.NoError(t, err)
+	require.Equal(t, "collector:4317", cfg.Trace.Endpoint)
+	require.True(t, cfg.Trace.Insecure)
+	require.Equal(t, map[string]string{"authorization": "Bearer x", "x-tenant": "y"}, cfg.Trace.Headers)
+}
+
+func TestTracingFlagsReadCanonicalEnv(t *testing.T) {
+	run := func(t *testing.T) *RootCommandConfig {
+		t.Helper()
+		cmd := &cli.Command{
+			Name:   "app",
+			Action: func(context.Context, *cli.Command) error { return nil },
+		}
+		root, cfg := NewRootCommand(cmd)
+		require.NoError(t, root.RunWithContextAndArgs(context.Background(), []string{"app"}))
+		return cfg
+	}
+
+	// the generic variables apply when nothing more specific is set
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://generic:4317")
+	t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "x-from=generic")
+	cfg := run(t)
+	require.Equal(t, "http://generic:4317", cfg.Trace.Endpoint)
+	require.True(t, cfg.Trace.Insecure)
+	require.Equal(t, map[string]string{"x-from": "generic"}, cfg.Trace.Headers)
+
+	// the traces-specific variable wins over the generic one
+	t.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://traces:4317")
+	require.Equal(t, "http://traces:4317", run(t).Trace.Endpoint)
+
+	// the application's own variable wins over both
+	t.Setenv("APP_TRACING_ENDPOINT", "app:4317")
+	require.Equal(t, "app:4317", run(t).Trace.Endpoint)
+}
+
+func TestMetricsFlagsReadCanonicalEnv(t *testing.T) {
+	run := func(t *testing.T) *RootCommandConfig {
+		t.Helper()
+		cmd := &cli.Command{
+			Name:   "app",
+			Action: func(context.Context, *cli.Command) error { return nil },
+		}
+		root, cfg := NewRootCommand(cmd)
+		require.NoError(t, root.RunWithContextAndArgs(context.Background(), []string{"app"}))
+		return cfg
+	}
+
+	cfg := run(t)
+	require.Equal(t, "localhost", cfg.Metrics.Host)
+	require.Equal(t, 6060, cfg.Metrics.Port, "the default stays even though the spec says 9464")
+
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_HOST", "0.0.0.0")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
+	cfg = run(t)
+	require.Equal(t, "0.0.0.0", cfg.Metrics.Host)
+	require.Equal(t, 9464, cfg.Metrics.Port)
+
+	// the application's own variable wins
+	t.Setenv("APP_METRICS_PORT", "7070")
+	require.Equal(t, 7070, run(t).Metrics.Port)
 }

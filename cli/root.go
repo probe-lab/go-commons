@@ -108,7 +108,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		},
 		&cli.StringFlag{
 			Name:        "metrics.host",
-			Sources:     cli.EnvVars(cfg.EnvPrefix + "METRICS_HOST"),
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_HOST", "OTEL_EXPORTER_PROMETHEUS_HOST"),
 			Usage:       "Which network interface should the metrics endpoint bind to",
 			Value:       cfg.Metrics.Host,
 			Destination: &cfg.Metrics.Host,
@@ -116,7 +116,7 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		},
 		&cli.IntFlag{
 			Name:        "metrics.port",
-			Sources:     cli.EnvVars(cfg.EnvPrefix + "METRICS_PORT"),
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_PORT", "OTEL_EXPORTER_PROMETHEUS_PORT"),
 			Usage:       "On which port should the metrics endpoint listen",
 			Value:       cfg.Metrics.Port,
 			Destination: &cfg.Metrics.Port,
@@ -136,6 +136,30 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 			Usage:       "Whether to emit trace data",
 			Destination: &cfg.Trace.Enabled,
 			Value:       cfg.Trace.Enabled,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.StringFlag{
+			Name:        "tracing.endpoint",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"TRACING_ENDPOINT", "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT"),
+			Usage:       "OTLP gRPC collector for traces as host:port or URL. Defaults to localhost:4317.",
+			Destination: &cfg.Trace.Endpoint,
+			Value:       cfg.Trace.Endpoint,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.BoolFlag{
+			Name:        "tracing.insecure",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"TRACING_INSECURE", "OTEL_EXPORTER_OTLP_TRACES_INSECURE", "OTEL_EXPORTER_OTLP_INSECURE"),
+			Usage:       "Send traces without TLS.",
+			Destination: &cfg.Trace.Insecure,
+			Value:       cfg.Trace.Insecure,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.StringMapFlag{
+			Name:        "tracing.headers",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"TRACING_HEADERS", "OTEL_EXPORTER_OTLP_TRACES_HEADERS", "OTEL_EXPORTER_OTLP_HEADERS"),
+			Usage:       "Headers sent with every trace export as key=value, comma separated.",
+			Destination: &cfg.Trace.Headers,
+			Value:       cfg.Trace.Headers,
 			Category:    flagCategoryTelemetry,
 		},
 		&cli.DurationFlag{
