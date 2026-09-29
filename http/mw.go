@@ -277,7 +277,7 @@ func MiddlewareGZip(next http.Handler) http.Handler {
 
 		// Wrap the ResponseWriter.
 		gzw := gzPool.Get().(*gzip.Writer)
-		defer gzw.Close()
+		defer func() { _ = gzw.Close() }()
 		defer gzPool.Put(gzw)
 
 		// Configure the gzip writer to write to the http ResponseWriter
