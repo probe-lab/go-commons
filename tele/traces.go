@@ -14,6 +14,7 @@ import (
 
 type TraceConfig struct {
 	Enabled bool
+	Version string
 }
 
 func DefaultTraceConfig() *TraceConfig {
@@ -34,7 +35,7 @@ func InitTraceProvider(ctx context.Context, name string, cfg *TraceConfig) (func
 		return func(ctx context.Context) error { return nil }, nil
 	}
 
-	res, err := newResource(name)
+	res, err := newResource(name, cfg.Version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create otel trace provider resource: %w", err)
 	}
