@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
-	healthv1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
 )
 
@@ -112,7 +111,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) SetServingStatus(service string, servingStatus healthv1.HealthCheckResponse_ServingStatus) {
+func (s *Server) SetServingStatus(service string, servingStatus healthgrpc.HealthCheckResponse_ServingStatus) {
 	slog.Debug("Setting health status", "service", service, "status", servingStatus)
 	s.health.SetServingStatus(service, servingStatus)
 }
