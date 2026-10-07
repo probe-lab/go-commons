@@ -18,4 +18,5 @@ const (
 	ProjectMonero   Project = "monero"
 	ProjectAlgorand Project = "algorand"
 	ProjectPortal   Project = "portal"
+	ProjectAgntcy   Project = "agntcy"
 )

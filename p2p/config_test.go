@@ -36,6 +36,13 @@ func TestConfig_Polkadot_Mainnet(t *testing.T) {
 	assert.Len(t, cfg.ProtocolIDs, 2)
 }
 
+func TestConfig_Agntcy_Mainnet(t *testing.T) {
+	cfg, err := GetBootstrapConfig(ProjectAgntcy, NetworkMainnet)
+	require.NoError(t, err)
+	assert.NotEmpty(t, cfg.Bootstrappers)
+	assert.Equal(t, []string{"dir/kad/1.0.0"}, cfg.ProtocolIDs)
+}
+
 func TestConfig_Unknown_Project(t *testing.T) {
 	_, err := GetBootstrapConfig("nonexistent", NetworkMainnet)
 	assert.Error(t, err)

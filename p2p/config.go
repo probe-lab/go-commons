@@ -141,6 +141,13 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs:   []string{"discv5"},
 		},
 	},
+	ProjectAgntcy: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersAgntcy,
+			// No leading slash: AGNTCY sets the DHT's ProtocolPrefix to "dir".
+			ProtocolIDs: []string{"dir/kad/1.0.0"},
+		},
+	},
 	ProjectAvail: {
 		NetworkMainnetFN: {
 			Bootstrappers: BootstrapPeersAvailMainnetFullNode,
