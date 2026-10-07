@@ -493,4 +493,10 @@ var (
 		"/dns4/r-xw.algorand-mainnet.network/tcp/4190/p2p/12D3KooWMCaUSV4NQzGCADeLVwBsSMQMBBLdVjxCevN5ihbFXSeq",
 		"/dns4/r-xx.algorand-mainnet.network/tcp/4190/p2p/12D3KooWB17vrusb66HREfYwHNxTp8Xcy9sunbBykeDWgp2qRKu4",
 	}
+
+	// BootstrapPeersAgntcy is the AGNTCY Directory (DIR) DHT bootstrap node,
+	// run by Outshift. Source: agntcy/dir install/charts/dir/values.yaml.
+	BootstrapPeersAgntcy = []string{
+		"/dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu",
+	}
 )
