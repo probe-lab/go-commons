@@ -230,15 +230,18 @@ func (r *RootCommand) before(ctx context.Context, c *cli.Command) error {
 	debugPrintEnvVars()
 
 	// initialize metrics server - don't prohibit startup
-	r.cfg.metricsShutdown, err = tele.ServeMetrics(r.cfg.Metrics)
-	if err != nil {
+	// On failure the no-op shutdown stays, so after() has something to call.
+	if shutdown, err := tele.ServeMetrics(r.cfg.Metrics); err != nil {
 		slog.Warn("failed to start metrics server", "err", err)
+	} else {
+		r.cfg.metricsShutdown = shutdown
 	}
 
 	// initialize trace exporter - don't prohibit startup
-	r.cfg.tracesShutdown, err = tele.InitTraceProvider(ctx, r.cmd.Name, r.cfg.Trace)
-	if err != nil {
+	if shutdown, err := tele.InitTraceProvider(ctx, r.cmd.Name, r.cfg.Trace); err != nil {
 		slog.Warn("failed to start exporting traces", "err", err)
+	} else {
+		r.cfg.tracesShutdown = shutdown
 	}
 
 	return nil
