@@ -2,6 +2,8 @@ package cli
 
 import (
 	"context"
+	"net"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -106,4 +108,20 @@ func TestMetricsFlagsReadCanonicalEnv(t *testing.T) {
 	// the application's own variable wins
 	t.Setenv("APP_METRICS_PORT", "7070")
 	require.Equal(t, 7070, run(t).Metrics.Port)
+}
+
+func TestRunSurvivesATakenMetricsPort(t *testing.T) {
+	// A health command run beside the server finds the metrics port taken.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer func() { _ = ln.Close() }()
+
+	cmd := &cli.Command{
+		Name:   "app",
+		Action: func(context.Context, *cli.Command) error { return nil },
+	}
+	root, _ := NewRootCommand(cmd)
+	port := strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)
+	args := []string{"app", "--metrics.enabled", "--metrics.host", "127.0.0.1", "--metrics.port", port}
+	require.NoError(t, root.RunWithContextAndArgs(context.Background(), args))
 }
