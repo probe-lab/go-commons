@@ -264,6 +264,8 @@ func DefaultClickHouseMigrationsConfig() *ClickHouseMigrationsConfig {
 // instance.
 func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations fs.ReadDirFS) error {
 	db := clickhouse.OpenDB(opt)
+	defer db.Close()
+
 	mdriver, err := mch.WithInstance(db, &mch.Config{
 		DatabaseName:          opt.Auth.Database,
 		ClusterName:           cfg.ClusterName,
