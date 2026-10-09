@@ -39,8 +39,10 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 - `cli/health.go`: Health check CLI utilities
 
 **db/**: Database connectivity and configuration
-- `db/pg.go`: PostgreSQL connection management with OpenTelemetry integration
-- `db/ch.go`: ClickHouse connection management with automatic migrations support
+- `db/pg.go`: PostgreSQL connection management with OpenTelemetry integration; `PostgresMigrationsConfig.Apply` runs golang-migrate on one pooled connection and leaves the handle open
+- `db/ch.go`: ClickHouse connection management with automatic migrations support; both migration configs read their files from `Dir` (default `migrations`)
+- `db/ch_batch.go`: generic `BatchInserter` for ClickHouse
+- Integration tests skip unless `GO_COMMONS_TEST_POSTGRES_DSN` or `GO_COMMONS_TEST_CLICKHOUSE_ADDR` (plus `_USER`, `_PASSWORD`, `_DATABASE`) is set
 - `db/mapping.go`: Database field mapping utilities
 - Supports both single and multi-database configurations
 
@@ -62,6 +64,12 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 
 **grpc/**: gRPC server utilities
 - `grpc/server.go`: gRPC server with OpenTelemetry, health checks, panic recovery, and rate limiting
+
+**p2p/**: Well-known peer-to-peer networks
+- `p2p/config.go`: `GetBootstrapConfig(project, network)` returns bootstrappers and protocol IDs; Bitcoin-family protocol IDs are the network magic in hex, their bootstrappers are DNS seeds; HyperDHT bootstrappers use the dht-rpc `ip@host:port` form
+- `p2p/bootstrap.go`: the bootstrap lists; this is the source of truth for Nebula
+
+**maddr/**: Multiaddress helpers (parse, filter public or private, merge, extract IP)
 
 **ptr/**: Pointer utilities
 - `ptr/ptr.go`: Generic `From[T]` function that returns `nil` for zero values, otherwise a pointer to the value
@@ -86,7 +94,7 @@ Key external dependencies:
 - **OpenTelemetry**: Comprehensive observability (metrics, traces, logs)
 - **Prometheus**: Metrics collection and export
 - **grpc-ecosystem/go-grpc-middleware/v2**: gRPC middleware for logging and recovery
-- **golang-migrate/migrate/v4**: Database migration support for ClickHouse
+- **golang-migrate/migrate/v4**: Database migration support for ClickHouse and PostgreSQL
 
 ## Development Notes
 

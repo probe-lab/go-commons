@@ -1,5 +1,3 @@
-// Code generated from github.com/dennis-tra/nebula config/bootstrap.go; DO NOT EDIT by hand.
-
 package p2p
 
 var (
@@ -90,35 +88,16 @@ var (
 		"/dns/polkadot-bootnode-1.polkadot.io/tcp/443/wss/p2p/12D3KooWFN2mhgpkJsDBuNuE5427AcDrsib8EoqGMZmkxWwx3Md4",
 		"/dns/polkadot-boot.dwellir.com/tcp/30334/ws/p2p/12D3KooWKvdDyRKqUfSAaUCbYiLwKY8uK3wDWpCuy2FiDLbkPTDJ",
 		"/dns/polkadot-boot.dwellir.com/tcp/443/wss/p2p/12D3KooWKvdDyRKqUfSAaUCbYiLwKY8uK3wDWpCuy2FiDLbkPTDJ",
-		"/dns/polkadot.boot.stake.plus/tcp/30334/wss/p2p/12D3KooWCZKEvAMJRk9nwTHJcTjgVw6bDEqryQ3B7n7scNtfNqPB",
-		"/dns/polkadot.boot.stake.plus/tcp/31334/wss/p2p/12D3KooWMFwJV935CyJXE8twfkKxRDnNWeEFd8jZWaoWZF22Hv8S",
-		"/dns/boot-node.helikon.io/tcp/7070/p2p/12D3KooWS9ZcvRxyzrSf6p63QfTCWs12nLoNKhGux865crgxVA4H",
-		"/dns/boot-node.helikon.io/tcp/7072/wss/p2p/12D3KooWS9ZcvRxyzrSf6p63QfTCWs12nLoNKhGux865crgxVA4H",
-		"/dns/polkadot.bootnode.amforc.com/tcp/30001/p2p/12D3KooWT2HyZx5C6BBeLbCKhYG2SqJYuiu7sLMxGzUcQBko3BMr",
-		"/dns/polkadot.bootnode.amforc.com/tcp/29999/wss/p2p/12D3KooWT2HyZx5C6BBeLbCKhYG2SqJYuiu7sLMxGzUcQBko3BMr",
-		"/dns/polkadot.bootnodes.polkadotters.com/tcp/30314/p2p/12D3KooWPAVUgBaBk6n8SztLrMk8ESByncbAfRKUdxY1nygb9zG3",
-		"/dns/polkadot.bootnodes.polkadotters.com/tcp/30316/wss/p2p/12D3KooWPAVUgBaBk6n8SztLrMk8ESByncbAfRKUdxY1nygb9zG3",
-		"/dns/boot.gatotech.network/tcp/33100/p2p/12D3KooWK4E16jKk9nRhvC4RfrDVgcZzExg8Q3Q2G7ABUUitks1w",
-		"/dns/boot.gatotech.network/tcp/35100/wss/p2p/12D3KooWK4E16jKk9nRhvC4RfrDVgcZzExg8Q3Q2G7ABUUitks1w",
-		"/dns/boot.metaspan.io/tcp/13012/p2p/12D3KooWRjHFApinuqSBjoaDjQHvxwubQSpEVy5hrgC9Smvh92WF",
-		"/dns/boot.metaspan.io/tcp/13015/ws/p2p/12D3KooWRjHFApinuqSBjoaDjQHvxwubQSpEVy5hrgC9Smvh92WF",
-		"/dns/boot.metaspan.io/tcp/13016/wss/p2p/12D3KooWRjHFApinuqSBjoaDjQHvxwubQSpEVy5hrgC9Smvh92WF",
-		"/dns/polkadot-bootnode.turboflakes.io/tcp/30300/p2p/12D3KooWHJBMZgt7ymAdTRtadPcGXpJw79vBGe8z53r9JMkZW7Ha",
-		"/dns/polkadot-bootnode.turboflakes.io/tcp/30400/wss/p2p/12D3KooWHJBMZgt7ymAdTRtadPcGXpJw79vBGe8z53r9JMkZW7Ha",
-		"/dns/polkadot-boot-ng.dwellir.com/tcp/443/wss/p2p/12D3KooWFFqjBKoSdQniRpw1Y8W6kkV7takWv1DU2ZMkaA81PYVq",
-		"/dns/polkadot-boot-ng.dwellir.com/tcp/30336/p2p/12D3KooWFFqjBKoSdQniRpw1Y8W6kkV7takWv1DU2ZMkaA81PYVq",
-		"/dns/polkadot-bootnode.radiumblock.com/tcp/30335/wss/p2p/12D3KooWNwWNRrPrTk4qMah1YszudMjxNw2qag7Kunhw3Ghs9ea5",
-		"/dns/polkadot-bootnode.radiumblock.com/tcp/30333/p2p/12D3KooWNwWNRrPrTk4qMah1YszudMjxNw2qag7Kunhw3Ghs9ea5",
 		"/dns/dot-bootnode.stakeworld.io/tcp/30310/p2p/12D3KooWAb5MyC1UJiEQJk4Hg4B2Vi3AJdqSUhTGYUqSnEqCFMFg",
 		"/dns/dot-bootnode.stakeworld.io/tcp/30311/ws/p2p/12D3KooWAb5MyC1UJiEQJk4Hg4B2Vi3AJdqSUhTGYUqSnEqCFMFg",
 		"/dns/dot-bootnode.stakeworld.io/tcp/30312/wss/p2p/12D3KooWAb5MyC1UJiEQJk4Hg4B2Vi3AJdqSUhTGYUqSnEqCFMFg",
-		"/dns/polkadot.boot.rotko.net/tcp/31001/p2p/12D3KooWPyEvPEXghnMC67Gff6PuZiSvfx3fmziKiPZcGStZ5xff",
-		"/dns/polkadot.boot.rotko.net/tcp/30335/wss/p2p/12D3KooWPyEvPEXghnMC67Gff6PuZiSvfx3fmziKiPZcGStZ5xff",
-		"/dns/ibp-boot-polkadot.luckyfriday.io/tcp/30333/p2p/12D3KooWEjk6QXrZJ26fLpaajisJGHiz6WiQsR8k7mkM9GmWKnRZ",
-		"/dns/ibp-boot-polkadot.luckyfriday.io/tcp/30334/wss/p2p/12D3KooWEjk6QXrZJ26fLpaajisJGHiz6WiQsR8k7mkM9GmWKnRZ",
 		"/dns/boot-polkadot.luckyfriday.io/tcp/443/wss/p2p/12D3KooWAdyiVAaeGdtBt6vn5zVetwA4z4qfm9Fi2QCSykN1wTBJ",
 		"/dns4/polkadot-0.boot.onfinality.io/tcp/24446/ws/p2p/12D3KooWT1PWaNdAwYrSr89dvStnoGdH3t4LNRbcVNN4JCtsotkR",
-		"/dns/polkadot.bootnode.stkd.io/tcp/30633/wss/p2p/12D3KooWEymrFRHz6c17YP3FAyd8kXS5gMRLgkW4U77ZJD2ZNCLZ",
+		"/ip4/195.144.22.130/udp/13012/webrtc-direct/certhash/uEiAh5tKwiZJCcuqrK28fbtyfPtCKxe0YhLUmd5hmKVZF4g/p2p/12D3KooWRjHFApinuqSBjoaDjQHvxwubQSpEVy5hrgC9Smvh92WF",
+		"/ip4/195.144.22.130/tcp/13012/p2p/12D3KooWRjHFApinuqSBjoaDjQHvxwubQSpEVy5hrgC9Smvh92WF",
+		"/dns/boot.interweb-it.com/udp/13012/webrtc-direct/certhash/uEiAh5tKwiZJCcuqrK28fbtyfPtCKxe0YhLUmd5hmKVZF4g/p2p/12D3KooWRjHFApinuqSBjoaDjQHvxwubQSpEVy5hrgC9Smvh92WF",
+		"/dns/boot.interweb-it.com/tcp/13012/p2p/12D3KooWRjHFApinuqSBjoaDjQHvxwubQSpEVy5hrgC9Smvh92WF",
+		"/dns/boot.interweb-it.com/tcp/13016/wss/p2p/12D3KooWRjHFApinuqSBjoaDjQHvxwubQSpEVy5hrgC9Smvh92WF",
 	}
 
 	// BootstrapPeersRococo extracted from:
@@ -359,14 +338,58 @@ var (
 		"/dns/pactus-bootstrap1.dezh.tech/tcp/21888/p2p/12D3KooWK1z7QAskVrQd98r98UMSPwTLr4out8B9NkQTrCdZPCZx",
 	}
 
+	// The DNS seed lists of the Bitcoin family come from the main node
+	// implementation of each network. Seeds that did not answer on 2026-10-07
+	// are left out.
+
+	// BootstrapPeersBitcoin extracted from Bitcoin Core:
+	// https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp
 	BootstrapPeersBitcoin = []string{
-		"seed.bitcoin.sipa.be",
-		"dnsseed.bluematt.me",
-		"dnsseed.bitcoin.dashjr.org",
-		"seed.bitcoinstats.com",
-		"seed.bitnodes.io",
-		"bitseed.xf2.org",
+		"dnsseed.bluematt.me",           // Matt Corallo
+		"seed.bitcoin.jonasschnelli.ch", // Jonas Schnelli
+		"seed.btc.petertodd.net",        // Peter Todd
+		"seed.bitcoin.sprovoost.nl",     // Sjors Provoost
+		"dnsseed.emzy.de",               // Stephan Oeste
+		"seed.bitcoin.wiz.biz",          // Jason Maurice
+		"seed.mainnet.achownodes.xyz",   // Ava Chow
 	}
+
+	// BootstrapPeersBitcoinCash extracted from Bitcoin Cash Node:
+	// https://gitlab.com/bitcoin-cash-node/bitcoin-cash-node/-/blob/master/src/chainparams.cpp
+	BootstrapPeersBitcoinCash = []string{
+		"seed.flowee.cash",                     // Flowee The Hub
+		"btccash-seeder.bitcoinunlimited.info", // Bitcoin Unlimited
+		"seed.bchd.cash",                       // BCHD
+		"seed.bch.loping.net",                  // Loping.net
+		"bchseed.c3-soft.com",                  // C3 Soft
+		"bch.bitjson.com",                      // Jason Dreyzehner
+	}
+
+	// BootstrapPeersDogecoin extracted from Dogecoin Core:
+	// https://github.com/dogecoin/dogecoin/blob/master/src/chainparams.cpp
+	BootstrapPeersDogecoin = []string{
+		"seed.multidoge.org",
+		"seed2.multidoge.org",
+	}
+
+	// BootstrapPeersLitecoin extracted from Litecoin Core:
+	// https://github.com/litecoin-project/litecoin/blob/master/src/chainparams.cpp
+	BootstrapPeersLitecoin = []string{
+		"seed-a.litecoin.loshan.co.uk",
+		"dnsseed.thrasher.io",
+		"dnsseed.ltcpool.org",
+	}
+
+	// BootstrapPeersZCash extracted from Zebra:
+	// https://github.com/ZcashFoundation/zebra/blob/main/zebra-network/src/config.rs
+	BootstrapPeersZCash = []string{
+		"dnsseed.str4d.xyz",
+		"dnsseed.z.cash",
+		"mainnet.seeder.shieldedinfra.net",
+		"mainnet.seeder.zfnd.org",
+		"seeder.zec.rocks",
+	}
+
 	// BootstrapPeersPortalMainnet extracted from:
 	//	https://github.com/status-im/portal-mainnet/blob/master/config/bootstrap_nodes.txt
 	//  https://github.com/ethereum/portal-network-specs/blob/master/bootnodes.md
@@ -498,5 +521,15 @@ var (
 	// run by Outshift. Source: agntcy/dir install/charts/dir/values.yaml.
 	BootstrapPeersAgntcy = []string{
 		"/dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu",
+	}
+
+	// BootstrapPeersHyperDHT are the default mainnet HyperDHT bootstrap nodes.
+	// The entries use the dht-rpc "ip@host:port" form, where the leading IP is
+	// the resolved address and the host part is informational. Extracted from:
+	//  https://github.com/holepunchto/hyperdht/blob/main/lib/constants.js
+	BootstrapPeersHyperDHT = []string{
+		"88.99.3.86@node1.hyperdht.org:49737",
+		"142.93.90.113@node2.hyperdht.org:49737",
+		"138.68.147.8@node3.hyperdht.org:49737",
 	}
 )
