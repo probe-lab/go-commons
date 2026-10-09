@@ -172,10 +172,39 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs:   []string{"/pactus/gossip/v1/kad/1.0.0"},
 		},
 	},
+	// The Bitcoin family lists DNS seeds as bootstrappers. The protocol ID is
+	// the network magic as a little-endian uint32 in hex, the value btcd's
+	// wire.BitcoinNet carries.
 	ProjectBitcoin: {
 		NetworkMainnet: {
 			Bootstrappers: BootstrapPeersBitcoin,
-			ProtocolIDs:   []string{"bitcoin"},
+			ProtocolIDs:   []string{"0xd9b4bef9"},
+		},
+	},
+	ProjectBitcoinCash: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersBitcoinCash,
+			ProtocolIDs:   []string{"0xe8f3e1e3"},
+		},
+	},
+	ProjectLitecoin: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersLitecoin,
+			ProtocolIDs:   []string{"0xdbb6c0fb"},
+		},
+	},
+	ProjectDogecoin: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersDogecoin,
+			ProtocolIDs:   []string{"0xc0c0c0c0"},
+		},
+	},
+	ProjectZCash: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersZCash,
+			// The wire bytes are 24 e9 27 64; as a little-endian uint32 that
+			// is 0x6427e924.
+			ProtocolIDs: []string{"0x6427e924"},
 		},
 	},
 	ProjectDria: {
@@ -198,6 +227,13 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 		NetworkMainnet: {
 			Bootstrappers: BootstrapPeersMoneroMainnet,
 			ProtocolIDs:   []string{"\x12\x30\xf1\x71\x61\x04\x41\x61\x17\x31\x00\x82\x16\xa1\xa1\x10"},
+		},
+	},
+	ProjectHyperDHT: {
+		NetworkMainnet: {
+			// The entries use the dht-rpc "ip@host:port" form.
+			Bootstrappers: BootstrapPeersHyperDHT,
+			ProtocolIDs:   []string{"hyperdht"},
 		},
 	},
 	ProjectAlgorand: {
