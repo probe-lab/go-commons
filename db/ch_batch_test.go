@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"io"
 	"reflect"
 	"runtime"
 	"sync"
@@ -96,6 +97,13 @@ func (m *mockConn) AsyncInsert(_ context.Context, _ string, _ bool, _ ...any) er
 func (m *mockConn) Ping(_ context.Context) error                                     { return nil }
 func (m *mockConn) Stats() driver.Stats                                              { return driver.Stats{} }
 func (m *mockConn) Close() error                                                     { return nil }
+func (m *mockConn) InsertFormat(_ context.Context, _, _ string, _ io.Reader) error {
+	return nil
+}
+
+func (m *mockConn) QueryFormat(_ context.Context, _, _ string, _ ...any) (io.ReadCloser, error) {
+	return nil, nil
+}
 
 // testRow is a minimal struct used as the generic type T in tests.
 type testRow struct {

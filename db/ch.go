@@ -239,6 +239,10 @@ type ClickHouseMigrationsConfig struct {
 	MultiStatementEnabled  bool
 	MultiStatementMaxSize  int
 	ReplicatedTableEngines bool
+
+	// Dir is the directory inside the migrations filesystem that holds the
+	// migration files. Empty means "migrations".
+	Dir string
 }
 
 // DefaultClickHouseMigrationsConfig creates a new ClickHouseMigrationsConfig
@@ -256,7 +260,8 @@ func DefaultClickHouseMigrationsConfig() *ClickHouseMigrationsConfig {
 }
 
 // Apply applies the migrations in the given filesystem to the given ClickHouse
-// database. It returns an error if any migrations fail to apply. If
+// database. The files are read from [ClickHouseMigrationsConfig.Dir]. It
+// returns an error if any migrations fail to apply. If
 // ReplicatedTableEngines is set to false, it will replace all occurrences of
 // "Replicated" with the empty string and replace "allow_experimental_json_type"
 // with "enable_json_type" in the migrations. This is necessary because the
@@ -283,7 +288,7 @@ func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations
 		migrations = &replacingFS{ReadDirFS: migrations, old: "allow_experimental_json_type", new: "enable_json_type"}
 	}
 
-	migrationsDir, err := iofs.New(migrations, "migrations")
+	migrationsDir, err := iofs.New(migrations, migrationsDirOrDefault(cfg.Dir))
 	if err != nil {
 		return fmt.Errorf("create iofs migrations source: %w", err)
 	}
@@ -293,6 +298,13 @@ func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations
 		return fmt.Errorf("create migrate instance: %w", err)
 	}
 
+	return up(m)
+}
+
+// up applies all pending migrations and logs what changed. A database that
+// is at a version the migrations do not know is left alone, so an older
+// binary can run against a newer schema.
+func up(m *migrate.Migrate) error {
 	beforeVersion, _, err := m.Version()
 	if errors.Is(err, migrate.ErrNilVersion) {
 		slog.Info("Clean database - no migrations applied yet")
@@ -318,6 +330,13 @@ func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations
 	}
 
 	return nil
+}
+
+func migrationsDirOrDefault(dir string) string {
+	if dir == "" {
+		return "migrations"
+	}
+	return dir
 }
 
 // replacingFS is a wrapper around an fs.FS that replaces all occurrences of

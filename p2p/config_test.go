@@ -80,3 +80,25 @@ func TestSupportedBootstrapConfigs(t *testing.T) {
 	assert.True(t, projects[ProjectPolkadot])
 	assert.True(t, projects[ProjectEthereum])
 }
+
+func TestConfig_BitcoinFamily(t *testing.T) {
+	for project, magic := range map[Project]string{
+		ProjectBitcoin:     "0xd9b4bef9",
+		ProjectBitcoinCash: "0xe8f3e1e3",
+		ProjectLitecoin:    "0xdbb6c0fb",
+		ProjectDogecoin:    "0xc0c0c0c0",
+		ProjectZCash:       "0x6427e924",
+	} {
+		cfg, err := GetBootstrapConfig(project, NetworkMainnet)
+		require.NoError(t, err)
+		assert.Equal(t, []string{magic}, cfg.ProtocolIDs, project)
+		assert.NotEmpty(t, cfg.Bootstrappers, project)
+	}
+}
+
+func TestConfig_HyperDHT_Mainnet(t *testing.T) {
+	cfg, err := GetBootstrapConfig(ProjectHyperDHT, NetworkMainnet)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"hyperdht"}, cfg.ProtocolIDs)
+	assert.Contains(t, cfg.Bootstrappers, "88.99.3.86@node1.hyperdht.org:49737")
+}
