@@ -4,9 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"strings"
 
+	"github.com/golang-migrate/migrate/v4"
+	mpg "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 )
@@ -163,4 +167,65 @@ func (cfg *PostgresMultiConfig) OpenAndPing(ctx context.Context) ([]*sql.DB, err
 	}
 
 	return handles, nil
+}
+
+// PostgresMigrationsConfig configures how [PostgresMigrationsConfig.Apply]
+// migrates a Postgres database.
+type PostgresMigrationsConfig struct {
+	// MigrationsTable is the table that records the applied version.
+	MigrationsTable string
+
+	// Dir is the directory inside the migrations filesystem that holds the
+	// migration files. Empty means "migrations".
+	Dir string
+}
+
+// DefaultPostgresMigrationsConfig returns the golang-migrate defaults.
+func DefaultPostgresMigrationsConfig() *PostgresMigrationsConfig {
+	return &PostgresMigrationsConfig{
+		MigrationsTable: mpg.DefaultMigrationsTable,
+		Dir:             "migrations",
+	}
+}
+
+// Apply applies the migrations in the given filesystem to the database behind
+// handle. The files are read from [PostgresMigrationsConfig.Dir]. Apply holds
+// one connection of the pool while it runs and returns it afterwards; the
+// handle stays open.
+func (cfg *PostgresMigrationsConfig) Apply(ctx context.Context, handle *sql.DB, migrations fs.FS) error {
+	conn, err := handle.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("get connection: %w", err)
+	}
+
+	// The driver must not own the handle: closing a driver created with
+	// WithInstance closes the whole pool.
+	mdriver, err := mpg.WithConnection(ctx, conn, &mpg.Config{
+		MigrationsTable: cfg.MigrationsTable,
+	})
+	if err != nil {
+		_ = conn.Close()
+		return fmt.Errorf("create migrate driver: %w", err)
+	}
+
+	migrationsDir, err := iofs.New(migrations, migrationsDirOrDefault(cfg.Dir))
+	if err != nil {
+		_ = mdriver.Close()
+		return fmt.Errorf("create iofs migrations source: %w", err)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", migrationsDir, "postgres", mdriver)
+	if err != nil {
+		_ = mdriver.Close()
+		return fmt.Errorf("create migrate instance: %w", err)
+	}
+
+	// Close releases the connection and the source.
+	defer func() {
+		if srcErr, dbErr := m.Close(); srcErr != nil || dbErr != nil {
+			slog.Warn("Failed closing migrations", "source_err", srcErr, "db_err", dbErr)
+		}
+	}()
+
+	return up(m)
 }
