@@ -64,7 +64,7 @@ func NewLogger(cfg *Config) (*slog.Logger, error) {
 	case "console":
 		// Colors only reach a terminal. Files, pipes, and journals get the
 		// same lines without escape codes, and NO_COLOR turns them off too.
-		h = tint.NewHandler(os.Stderr, &tint.Options{
+		h = tint.NewTextHandler(os.Stderr, &tint.Options{
 			AddSource: cfg.Source,
 			Level:     logLevel,
 			NoColor:   !isTerminal(os.Stderr) || os.Getenv("NO_COLOR") != "",
