@@ -34,7 +34,7 @@ func TestRootCommandBanner(t *testing.T) {
 		wantBanner bool
 	}{
 		{name: "default", args: []string{"app"}, wantBanner: true},
-		{name: "flag", args: []string{"app", "--no-banner"}},
+		{name: "flag", args: []string{"app", "--noBanner"}},
 		{name: "env", args: []string{"app"}, env: map[string]string{"APP_NO_BANNER": "true"}},
 		{name: "completion", args: []string{"app", "--generate-shell-completion"}},
 		{name: "help", args: []string{"app", "--help"}},
