@@ -23,5 +23,8 @@ const (
 	ProjectLitecoin    Project = "litecoin"
 	ProjectDogecoin    Project = "dogecoin"
 	ProjectZCash       Project = "zcash"
+	ProjectDash        Project = "dash"
+	ProjectDigiByte    Project = "digibyte"
+	ProjectRavencoin   Project = "ravencoin"
 	ProjectHyperDHT    Project = "hyperdht"
 )

@@ -211,6 +211,24 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs: []string{"0x6427e924"},
 		},
 	},
+	ProjectDash: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersDashMainnet,
+			ProtocolIDs:   []string{"0xbd6b0cbf"},
+		},
+	},
+	ProjectDigiByte: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersDigiByteMainnet,
+			ProtocolIDs:   []string{"0xdab6c3fa"},
+		},
+	},
+	ProjectRavencoin: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersRavencoinMainnet,
+			ProtocolIDs:   []string{"0x4e564152"},
+		},
+	},
 	ProjectDria: {
 		NetworkMainnet: {
 			Bootstrappers: BootstrapPeersDriaMainnet,

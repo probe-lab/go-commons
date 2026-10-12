@@ -88,6 +88,9 @@ func TestConfig_BitcoinFamily(t *testing.T) {
 		ProjectLitecoin:    "0xdbb6c0fb",
 		ProjectDogecoin:    "0xc0c0c0c0",
 		ProjectZCash:       "0x6427e924",
+		ProjectDash:        "0xbd6b0cbf",
+		ProjectDigiByte:    "0xdab6c3fa",
+		ProjectRavencoin:   "0x4e564152",
 	} {
 		cfg, err := GetBootstrapConfig(project, NetworkMainnet)
 		require.NoError(t, err)

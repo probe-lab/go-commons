@@ -340,7 +340,8 @@ var (
 
 	// The DNS seed lists of the Bitcoin family come from the main node
 	// implementation of each network. Seeds that did not answer on 2026-10-07
-	// are left out.
+	// are left out. The Dash, DigiByte, and Ravencoin seeds all answered on
+	// 2026-10-12.
 
 	// BootstrapPeersBitcoinMainnet extracted from Bitcoin Core:
 	// https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp
@@ -388,6 +389,30 @@ var (
 		"mainnet.seeder.shieldedinfra.net",
 		"mainnet.seeder.zfnd.org",
 		"seeder.zec.rocks",
+	}
+
+	// BootstrapPeersDashMainnet extracted from Dash Core:
+	// https://github.com/dashpay/dash/blob/develop/src/chainparams.cpp
+	BootstrapPeersDashMainnet = []string{
+		"dnsseed.dash.org",
+	}
+
+	// BootstrapPeersDigiByteMainnet extracted from DigiByte Core:
+	// https://github.com/DigiByte-Core/digibyte/blob/develop/src/kernel/chainparams.cpp
+	BootstrapPeersDigiByteMainnet = []string{
+		"seed.digibyte.io",
+		"seed.diginode.tools",
+		"seed.digibyte.link",
+		"seed.aroundtheblock.app",
+		"seed.tuyul.cc",
+	}
+
+	// BootstrapPeersRavencoinMainnet extracted from Ravencoin:
+	// https://github.com/RavenProject/Ravencoin/blob/master/src/chainparams.cpp
+	BootstrapPeersRavencoinMainnet = []string{
+		"seed-raven.bitactivate.com",
+		"seed-raven.ravencoin.com",
+		"seed-raven.ravencoin.org",
 	}
 
 	// BootstrapPeersPortalMainnet extracted from:
