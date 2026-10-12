@@ -48,23 +48,30 @@ func (cfg *TraceConfig) Validate() error {
 		return fmt.Errorf("trace config is nil")
 	}
 
-	if cfg.Endpoint == "" {
+	return validateEndpoint(cfg.Endpoint)
+}
+
+// validateEndpoint accepts an OTLP gRPC collector address as "host:port" or
+// a URL with a host. An empty endpoint is valid and means the exporter's
+// default.
+func validateEndpoint(endpoint string) error {
+	if endpoint == "" {
 		return nil
 	}
 
-	if isURL(cfg.Endpoint) {
-		u, err := url.Parse(cfg.Endpoint)
+	if isURL(endpoint) {
+		u, err := url.Parse(endpoint)
 		if err != nil {
-			return fmt.Errorf("parse endpoint %q: %w", cfg.Endpoint, err)
+			return fmt.Errorf("parse endpoint %q: %w", endpoint, err)
 		}
 		if u.Host == "" {
-			return fmt.Errorf("endpoint %q has no host", cfg.Endpoint)
+			return fmt.Errorf("endpoint %q has no host", endpoint)
 		}
 		return nil
 	}
 
-	if _, _, err := net.SplitHostPort(cfg.Endpoint); err != nil {
-		return fmt.Errorf("endpoint %q is not host:port or a URL: %w", cfg.Endpoint, err)
+	if _, _, err := net.SplitHostPort(endpoint); err != nil {
+		return fmt.Errorf("endpoint %q is not host:port or a URL: %w", endpoint, err)
 	}
 
 	return nil

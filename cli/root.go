@@ -130,6 +130,47 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 			Destination: &cfg.Metrics.Path,
 			Category:    flagCategoryTelemetry,
 		},
+		&cli.StringFlag{
+			Name:        "metrics.exporter",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_EXPORTER", "OTEL_METRICS_EXPORTER"),
+			Usage:       "How metrics leave the process: prometheus serves them for scraping, otlp pushes them to --metrics.otlp.endpoint (for short-lived runs a scraper would miss).",
+			Value:       cfg.Metrics.Exporter,
+			Destination: &cfg.Metrics.Exporter,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.StringFlag{
+			Name:        "metrics.otlp.endpoint",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT"),
+			Usage:       "OTLP gRPC collector to push metrics to as host:port or URL. Defaults to localhost:4317.",
+			Value:       cfg.Metrics.Endpoint,
+			Destination: &cfg.Metrics.Endpoint,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.BoolFlag{
+			Name:        "metrics.otlp.insecure",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_OTLP_INSECURE", "OTEL_EXPORTER_OTLP_METRICS_INSECURE", "OTEL_EXPORTER_OTLP_INSECURE"),
+			Usage:       "Push metrics without TLS.",
+			Value:       cfg.Metrics.Insecure,
+			Destination: &cfg.Metrics.Insecure,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.StringMapFlag{
+			Name:        "metrics.otlp.headers",
+			Sources:     cli.EnvVars(cfg.EnvPrefix+"METRICS_OTLP_HEADERS", "OTEL_EXPORTER_OTLP_METRICS_HEADERS", "OTEL_EXPORTER_OTLP_HEADERS"),
+			Usage:       "Headers sent with every metrics push as key=value, comma separated.",
+			Value:       cfg.Metrics.Headers,
+			Destination: &cfg.Metrics.Headers,
+			Category:    flagCategoryTelemetry,
+		},
+		&cli.DurationFlag{
+			Name:        "metrics.otlp.interval",
+			Sources:     cli.EnvVars(cfg.EnvPrefix + "METRICS_OTLP_INTERVAL"),
+			Usage:       "Time between metrics pushes. Defaults to OTEL_METRIC_EXPORT_INTERVAL (milliseconds) or 60s. Shutdown always pushes once more.",
+			Value:       cfg.Metrics.Interval,
+			Destination: &cfg.Metrics.Interval,
+			Category:    flagCategoryTelemetry,
+			HideDefault: true,
+		},
 		&cli.BoolFlag{
 			Name:        "tracing.enabled",
 			Sources:     cli.EnvVars(cfg.EnvPrefix + "TRACING_ENABLED"),
@@ -229,10 +270,10 @@ func (r *RootCommand) before(ctx context.Context, c *cli.Command) error {
 	// print all environment variables
 	debugPrintEnvVars()
 
-	// initialize metrics server - don't prohibit startup
+	// initialize metrics server or push - don't prohibit startup
 	// On failure the no-op shutdown stays, so after() has something to call.
 	if shutdown, err := tele.ServeMetrics(r.cfg.Metrics); err != nil {
-		slog.Warn("failed to start metrics server", "err", err)
+		slog.Warn("failed to start metrics", "err", err)
 	} else {
 		r.cfg.metricsShutdown = shutdown
 	}
@@ -277,8 +318,9 @@ func (r *RootCommand) after(ctx context.Context, c *cli.Command) error {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), r.cfg.ShutdownGrace)
 	defer shutdownCancel()
 
+	// for pushed metrics this sends the values recorded since the last push
 	if err := r.cfg.metricsShutdown(shutdownCtx); err != nil {
-		slog.Warn("failed to shutdown metrics server", "err", err)
+		slog.Warn("failed to shutdown metrics", "err", err)
 	}
 
 	if err := r.cfg.tracesShutdown(shutdownCtx); err != nil {
