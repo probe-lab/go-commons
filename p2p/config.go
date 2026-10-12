@@ -119,12 +119,14 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs:   []string{"/wnd2/kad"},
 		},
 	},
+	// An Ethereum network is named after its discovery protocol: discv5 finds the
+	// consensus layer, discv4 the execution layer.
 	ProjectEthereum: {
-		NetworkConsensus: {
+		NetworkDiscv5: {
 			Bootstrappers: BootstrapPeersEthereumConsensus,
 			ProtocolIDs:   []string{"discv5"},
 		},
-		NetworkExecution: {
+		NetworkDiscv4: {
 			Bootstrappers: BootstrapPeersEthereumExecution,
 			ProtocolIDs:   []string{"discv4"},
 		},
