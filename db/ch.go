@@ -292,7 +292,12 @@ func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations
 		migrations = &replacingFS{ReadDirFS: migrations, old: "allow_experimental_json_type", new: "enable_json_type"}
 	}
 
-	migrationsDir, err := iofs.New(migrations, migrationsDirOrDefault(cfg.Dir))
+	dir := cfg.Dir
+	if dir == "" {
+		dir = "migrations"
+	}
+
+	migrationsDir, err := iofs.New(migrations, dir)
 	if err != nil {
 		return fmt.Errorf("create iofs migrations source: %w", err)
 	}
@@ -334,13 +339,6 @@ func up(m *migrate.Migrate) error {
 	}
 
 	return nil
-}
-
-func migrationsDirOrDefault(dir string) string {
-	if dir == "" {
-		return "migrations"
-	}
-	return dir
 }
 
 // replacingFS is a wrapper around an fs.FS that replaces all occurrences of

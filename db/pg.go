@@ -208,7 +208,12 @@ func (cfg *PostgresMigrationsConfig) Apply(ctx context.Context, handle *sql.DB, 
 		return fmt.Errorf("create migrate driver: %w", err)
 	}
 
-	migrationsDir, err := iofs.New(migrations, migrationsDirOrDefault(cfg.Dir))
+	dir := cfg.Dir
+	if dir == "" {
+		dir = "migrations"
+	}
+
+	migrationsDir, err := iofs.New(migrations, dir)
 	if err != nil {
 		_ = mdriver.Close()
 		return fmt.Errorf("create iofs migrations source: %w", err)
