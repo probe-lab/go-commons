@@ -175,21 +175,21 @@ type PostgresMigrationsConfig struct {
 	// MigrationsTable is the table that records the applied version.
 	MigrationsTable string
 
-	// Dir is the directory inside the migrations filesystem that holds the
-	// migration files. Empty means "migrations".
-	Dir string
+	// MigrationsDirectory is the directory inside the migrations filesystem
+	// that holds the migration files. Empty means "migrations".
+	MigrationsDirectory string
 }
 
 // DefaultPostgresMigrationsConfig returns the golang-migrate defaults.
 func DefaultPostgresMigrationsConfig() *PostgresMigrationsConfig {
 	return &PostgresMigrationsConfig{
-		MigrationsTable: mpg.DefaultMigrationsTable,
-		Dir:             "migrations",
+		MigrationsTable:     mpg.DefaultMigrationsTable,
+		MigrationsDirectory: "migrations",
 	}
 }
 
 // Apply applies the migrations in the given filesystem to the database behind
-// handle. The files are read from [PostgresMigrationsConfig.Dir]. Apply holds
+// handle. The files are read from [PostgresMigrationsConfig.MigrationsDirectory]. Apply holds
 // one connection of the pool while it runs and returns it afterwards; the
 // handle stays open.
 func (cfg *PostgresMigrationsConfig) Apply(ctx context.Context, handle *sql.DB, migrations fs.FS) error {
@@ -208,9 +208,9 @@ func (cfg *PostgresMigrationsConfig) Apply(ctx context.Context, handle *sql.DB, 
 		return fmt.Errorf("create migrate driver: %w", err)
 	}
 
-	dir := cfg.Dir
+	dir := cfg.MigrationsDirectory
 	if dir == "" {
-		dir = "migrations"
+		dir = DefaultMigrationsDirectory
 	}
 
 	migrationsDir, err := iofs.New(migrations, dir)

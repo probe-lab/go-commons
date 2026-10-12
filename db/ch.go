@@ -20,6 +20,8 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
+const DefaultMigrationsDirectory = "migrations"
+
 // ClickHouseBaseConfig represents the foundational configuration required to
 // establish a connection to a ClickHouse server. It includes basic connection
 // parameters such as Host, Port, User, Password, and SSL option. This base
@@ -236,13 +238,10 @@ type ClickHouseMigrationsConfig struct {
 	ClusterName            string
 	MigrationsTable        string
 	MigrationsTableEngine  string
+	MigrationsDirectory    string
 	MultiStatementEnabled  bool
 	MultiStatementMaxSize  int
 	ReplicatedTableEngines bool
-
-	// Dir is the directory inside the migrations filesystem that holds the
-	// migration files. Empty means "migrations".
-	Dir string
 }
 
 // DefaultClickHouseMigrationsConfig creates a new ClickHouseMigrationsConfig
@@ -260,8 +259,8 @@ func DefaultClickHouseMigrationsConfig() *ClickHouseMigrationsConfig {
 }
 
 // Apply applies the migrations in the given filesystem to the given ClickHouse
-// database. The files are read from [ClickHouseMigrationsConfig.Dir]. It
-// returns an error if any migrations fail to apply. If
+// database. The files are read from [ClickHouseMigrationsConfig.MigrationsDirectory].
+// It returns an error if any migrations fail to apply. If
 // ReplicatedTableEngines is set to false, it will replace all occurrences of
 // "Replicated" with the empty string and replace "allow_experimental_json_type"
 // with "enable_json_type" in the migrations. This is necessary because the
@@ -292,9 +291,9 @@ func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations
 		migrations = &replacingFS{ReadDirFS: migrations, old: "allow_experimental_json_type", new: "enable_json_type"}
 	}
 
-	dir := cfg.Dir
+	dir := cfg.MigrationsDirectory
 	if dir == "" {
-		dir = "migrations"
+		dir = DefaultMigrationsDirectory
 	}
 
 	migrationsDir, err := iofs.New(migrations, dir)

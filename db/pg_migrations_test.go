@@ -39,7 +39,7 @@ func TestPostgresMigrationsConfig_Apply(t *testing.T) {
 
 	cfg := DefaultPostgresMigrationsConfig()
 	cfg.MigrationsTable = "gc_test_migrations"
-	cfg.Dir = "sql"
+	cfg.MigrationsDirectory = "sql"
 
 	require.NoError(t, cfg.Apply(ctx, handle, migrations))
 

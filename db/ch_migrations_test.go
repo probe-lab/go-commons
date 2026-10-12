@@ -49,7 +49,7 @@ func TestClickHouseMigrationsConfig_Apply(t *testing.T) {
 
 	cfg := DefaultClickHouseMigrationsConfig()
 	cfg.MigrationsTable = "gc_test_migrations"
-	cfg.Dir = "sql"
+	cfg.MigrationsDirectory = "sql"
 
 	require.NoError(t, cfg.Apply(opt, migrations))
 	require.NoError(t, cfg.Apply(opt, migrations))
