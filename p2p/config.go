@@ -60,10 +60,6 @@ func SupportedBootstrapConfigs() []BootstrapConfig {
 // configs is the registry of all known project+network configurations.
 var configs = map[Project]map[Network]*BootstrapConfig{
 	ProjectIPFS: {
-		NetworkMainnet: { // alias for amino
-			Bootstrappers: BootstrapPeersIPFSAmino,
-			ProtocolIDs:   []string{"/ipfs/kad/1.0.0"},
-		},
 		NetworkAmino: {
 			Bootstrappers: BootstrapPeersIPFSAmino,
 			ProtocolIDs:   []string{"/ipfs/kad/1.0.0"},
