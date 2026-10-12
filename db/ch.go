@@ -264,7 +264,11 @@ func DefaultClickHouseMigrationsConfig() *ClickHouseMigrationsConfig {
 // instance.
 func (cfg *ClickHouseMigrationsConfig) Apply(opt *clickhouse.Options, migrations fs.ReadDirFS) error {
 	db := clickhouse.OpenDB(opt)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Warn("Failed closing ClickHouse migrations connection", "err", err)
+		}
+	}()
 
 	mdriver, err := mch.WithInstance(db, &mch.Config{
 		DatabaseName:          opt.Auth.Database,
