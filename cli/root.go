@@ -369,9 +369,12 @@ func signalContext(ctx context.Context, signals ...os.Signal) (context.Context, 
 	return ctx, cancel
 }
 
+// buildEnvPrefix turns name into an environment variable prefix: upper case
+// and ending in an underscore. A prefix passes through unchanged, so every
+// exported flag function can call it. An empty name gives no prefix.
 func buildEnvPrefix(name string) string {
 	prefix := strings.ToUpper(name)
-	if !strings.HasSuffix(prefix, "_") {
+	if prefix != "" && !strings.HasSuffix(prefix, "_") {
 		prefix += "_"
 	}
 	return prefix
