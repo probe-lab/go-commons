@@ -43,6 +43,15 @@ func TestConfig_Agntcy_Mainnet(t *testing.T) {
 	assert.Equal(t, []string{"dir/kad/1.0.0"}, cfg.ProtocolIDs)
 }
 
+func TestConfig_Ethereum(t *testing.T) {
+	for _, network := range []Network{NetworkDiscv5, NetworkDiscv4} {
+		cfg, err := GetBootstrapConfig(ProjectEthereum, network)
+		require.NoError(t, err)
+		assert.NotEmpty(t, cfg.Bootstrappers)
+		assert.Equal(t, []string{string(network)}, cfg.ProtocolIDs)
+	}
+}
+
 func TestConfig_Unknown_Project(t *testing.T) {
 	_, err := GetBootstrapConfig("nonexistent", NetworkMainnet)
 	assert.Error(t, err)
