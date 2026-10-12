@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfig_IPFS_Mainnet(t *testing.T) {
-	cfg, err := GetBootstrapConfig(ProjectIPFS, NetworkMainnet)
+func TestConfig_IPFS_Amino(t *testing.T) {
+	cfg, err := GetBootstrapConfig(ProjectIPFS, NetworkAmino)
 	require.NoError(t, err)
 	assert.NotEmpty(t, cfg.Bootstrappers)
 	assert.NotEmpty(t, cfg.ProtocolIDs)
