@@ -342,9 +342,9 @@ var (
 	// implementation of each network. Seeds that did not answer on 2026-10-07
 	// are left out.
 
-	// BootstrapPeersBitcoin extracted from Bitcoin Core:
+	// BootstrapPeersBitcoinMainnet extracted from Bitcoin Core:
 	// https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp
-	BootstrapPeersBitcoin = []string{
+	BootstrapPeersBitcoinMainnet = []string{
 		"dnsseed.bluematt.me",           // Matt Corallo
 		"seed.bitcoin.jonasschnelli.ch", // Jonas Schnelli
 		"seed.btc.petertodd.net",        // Peter Todd
@@ -354,9 +354,9 @@ var (
 		"seed.mainnet.achownodes.xyz",   // Ava Chow
 	}
 
-	// BootstrapPeersBitcoinCash extracted from Bitcoin Cash Node:
+	// BootstrapPeersBitcoinCashMainnet extracted from Bitcoin Cash Node:
 	// https://gitlab.com/bitcoin-cash-node/bitcoin-cash-node/-/blob/master/src/chainparams.cpp
-	BootstrapPeersBitcoinCash = []string{
+	BootstrapPeersBitcoinCashMainnet = []string{
 		"seed.flowee.cash",                     // Flowee The Hub
 		"btccash-seeder.bitcoinunlimited.info", // Bitcoin Unlimited
 		"seed.bchd.cash",                       // BCHD
@@ -365,24 +365,24 @@ var (
 		"bch.bitjson.com",                      // Jason Dreyzehner
 	}
 
-	// BootstrapPeersDogecoin extracted from Dogecoin Core:
+	// BootstrapPeersDogecoinMainnet extracted from Dogecoin Core:
 	// https://github.com/dogecoin/dogecoin/blob/master/src/chainparams.cpp
-	BootstrapPeersDogecoin = []string{
+	BootstrapPeersDogecoinMainnet = []string{
 		"seed.multidoge.org",
 		"seed2.multidoge.org",
 	}
 
-	// BootstrapPeersLitecoin extracted from Litecoin Core:
+	// BootstrapPeersLitecoinMainnet extracted from Litecoin Core:
 	// https://github.com/litecoin-project/litecoin/blob/master/src/chainparams.cpp
-	BootstrapPeersLitecoin = []string{
+	BootstrapPeersLitecoinMainnet = []string{
 		"seed-a.litecoin.loshan.co.uk",
 		"dnsseed.thrasher.io",
 		"dnsseed.ltcpool.org",
 	}
 
-	// BootstrapPeersZCash extracted from Zebra:
+	// BootstrapPeersZCashMainnet extracted from Zebra:
 	// https://github.com/ZcashFoundation/zebra/blob/main/zebra-network/src/config.rs
-	BootstrapPeersZCash = []string{
+	BootstrapPeersZCashMainnet = []string{
 		"dnsseed.str4d.xyz",
 		"dnsseed.z.cash",
 		"mainnet.seeder.shieldedinfra.net",
@@ -416,9 +416,9 @@ var (
 		"enr:-IS4QA5hpJikeDFf1DD1_Le6_ylgrLGpdwn3SRaneGu9hY2HUI7peHep0f28UUMzbC0PvlWjN8zSfnqMG07WVcCyBhADgmlkgnY0gmlwhKRc9-KJc2VjcDI1NmsxoQJMpHmGj1xSP1O-Mffk_jYIHVcg6tY5_CjmWVg1gJEsPIN1ZHCCE4o",
 	}
 
-	// BootstrapPeersDria extracted from:
+	// BootstrapPeersDriaMainnet extracted from:
 	//   https://github.com/firstbatchxyz/dkn-compute-node/blob/b4f21e19197df48d4224c466109df3ff7c85ff50/p2p/src/network.rs#L47
-	BootstrapPeersDria = []string{
+	BootstrapPeersDriaMainnet = []string{
 		"/ip4/44.206.245.139/tcp/4001/p2p/16Uiu2HAm4q3LZU2T9kgjKK4ysy6KZYKLq8KiXQyae4RHdF7uqSt4",
 		"/ip4/18.234.39.91/tcp/4001/p2p/16Uiu2HAmJqegPzwuGKWzmb5m3RdSUJ7NhEGWB5jNCd3ca9zdQ9dU",
 		"/ip4/54.242.44.217/tcp/4001/p2p/16Uiu2HAmR2sAoh9F8jT9AZup9y79Mi6NEFVUbwRvahqtWamfabkz",
@@ -444,9 +444,9 @@ var (
 		"enr:-QEkuEBfEzJm_kigJ2HoSS_RBFJYhKHocGdkhhBr6jSUAWjLdFPp6Pj1l4yiTQp7TGHyu1kC6FyaU573VN8klLsEm-XuAYJpZIJ2NIJpcIQI2SVcim11bHRpYWRkcnO4bgA0Ni9ub2RlLTAxLmFjLWNuLWhvbmdrb25nLWMud2FrdS5zYW5kYm94LnN0YXR1cy5pbQZ2XwA2Ni9ub2RlLTAxLmFjLWNuLWhvbmdrb25nLWMud2FrdS5zYW5kYm94LnN0YXR1cy5pbQYfQN4DgnJzkwABCAAAAAEAAgADAAQABQAGAAeJc2VjcDI1NmsxoQOwsS69tgD7u1K50r5-qG5hweuTwa0W26aYPnvivpNlrYN0Y3CCdl-DdWRwgiMohXdha3UyDw",
 	}
 
-	// BootstrapPeersGnosis extracted from:
+	// BootstrapPeersGnosisMainnet extracted from:
 	//  https://github.com/gnosischain/configs/blob/main/mainnet/bootnodes.yaml
-	BootstrapPeersGnosis = []string{
+	BootstrapPeersGnosisMainnet = []string{
 		"enr:-Ly4QIAhiTHk6JdVhCdiLwT83wAolUFo5J4nI5HrF7-zJO_QEw3cmEGxC1jvqNNUN64Vu-xxqDKSM528vKRNCehZAfEBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpCCS-QxAgAAZP__________gmlkgnY0gmlwhEFtZ5SJc2VjcDI1NmsxoQJwgL5C-30E8RJmW8gCb7sfwWvvfre7wGcCeV4X1G2wJYhzeW5jbmV0cwCDdGNwgiMog3VkcIIjKA",
 		"enr:-Ly4QDhEjlkf8fwO5uWAadexy88GXZneTuUCIPHhv98v8ZfXMtC0S1S_8soiT0CMEgoeLe9Db01dtkFQUnA9YcnYC_8Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpCCS-QxAgAAZP__________gmlkgnY0gmlwhEFtZ5WJc2VjcDI1NmsxoQMRSho89q2GKx_l2FZhR1RmnSiQr6o_9hfXfQUuW6bjMohzeW5jbmV0cwCDdGNwgiMog3VkcIIjKA",
 		"enr:-Ly4QLKgv5M2D4DYJgo6s4NG_K4zu4sk5HOLCfGCdtgoezsbfRbfGpQ4iSd31M88ec3DHA5FWVbkgIas9EaJeXia0nwBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpCCS-QxAgAAZP__________gmlkgnY0gmlwhI1eYRaJc2VjcDI1NmsxoQLpK_A47iNBkVjka9Mde1F-Kie-R0sq97MCNKCxt2HwOIhzeW5jbmV0cwCDdGNwgiMog3VkcIIjKA",
@@ -517,17 +517,17 @@ var (
 		"/dns4/r-xx.algorand-mainnet.network/tcp/4190/p2p/12D3KooWB17vrusb66HREfYwHNxTp8Xcy9sunbBykeDWgp2qRKu4",
 	}
 
-	// BootstrapPeersAgntcy is the AGNTCY Directory (DIR) DHT bootstrap node,
+	// BootstrapPeersAgntcyMainnet is the AGNTCY Directory (DIR) DHT bootstrap node,
 	// run by Outshift. Source: agntcy/dir install/charts/dir/values.yaml.
-	BootstrapPeersAgntcy = []string{
+	BootstrapPeersAgntcyMainnet = []string{
 		"/dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu",
 	}
 
-	// BootstrapPeersHyperDHT are the default mainnet HyperDHT bootstrap nodes.
+	// BootstrapPeersHyperDHTMainnet are the default mainnet HyperDHT bootstrap nodes.
 	// The entries use the dht-rpc "ip@host:port" form, where the leading IP is
 	// the resolved address and the host part is informational. Extracted from:
 	//  https://github.com/holepunchto/hyperdht/blob/main/lib/constants.js
-	BootstrapPeersHyperDHT = []string{
+	BootstrapPeersHyperDHTMainnet = []string{
 		"88.99.3.86@node1.hyperdht.org:49737",
 		"142.93.90.113@node2.hyperdht.org:49737",
 		"138.68.147.8@node3.hyperdht.org:49737",

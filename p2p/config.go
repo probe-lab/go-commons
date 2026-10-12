@@ -60,7 +60,7 @@ func SupportedBootstrapConfigs() []BootstrapConfig {
 // configs is the registry of all known project+network configurations.
 var configs = map[Project]map[Network]*BootstrapConfig{
 	ProjectIPFS: {
-		NetworkMainnet: {
+		NetworkMainnet: { // alias for amino
 			Bootstrappers: BootstrapPeersIPFSAmino,
 			ProtocolIDs:   []string{"/ipfs/kad/1.0.0"},
 		},
@@ -74,7 +74,11 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			Bootstrappers: BootstrapPeersFilecoinMainnet,
 			ProtocolIDs:   []string{"/fil/kad/testnetnet/kad/1.0.0"},
 		},
-		NetworkCalibnet: {
+		NetworkCalibration: {
+			Bootstrappers: BootstrapPeersFilecoinCalibnet,
+			ProtocolIDs:   []string{"/fil/kad/calibrationnet/kad/1.0.0"},
+		},
+		NetworkCalibnet: { // alias for calibration
 			Bootstrappers: BootstrapPeersFilecoinCalibnet,
 			ProtocolIDs:   []string{"/fil/kad/calibrationnet/kad/1.0.0"},
 		},
@@ -131,7 +135,7 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 	},
 	ProjectGnosis: {
 		NetworkMainnet: {
-			Bootstrappers: BootstrapPeersGnosis,
+			Bootstrappers: BootstrapPeersGnosisMainnet,
 			ProtocolIDs:   []string{"discv5"},
 		},
 	},
@@ -143,7 +147,7 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 	},
 	ProjectAgntcy: {
 		NetworkMainnet: {
-			Bootstrappers: BootstrapPeersAgntcy,
+			Bootstrappers: BootstrapPeersAgntcyMainnet,
 			// No leading slash: AGNTCY sets the DHT's ProtocolPrefix to "dir".
 			ProtocolIDs: []string{"dir/kad/1.0.0"},
 		},
@@ -177,31 +181,31 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 	// wire.BitcoinNet carries.
 	ProjectBitcoin: {
 		NetworkMainnet: {
-			Bootstrappers: BootstrapPeersBitcoin,
+			Bootstrappers: BootstrapPeersBitcoinMainnet,
 			ProtocolIDs:   []string{"0xd9b4bef9"},
 		},
 	},
 	ProjectBitcoinCash: {
 		NetworkMainnet: {
-			Bootstrappers: BootstrapPeersBitcoinCash,
+			Bootstrappers: BootstrapPeersBitcoinCashMainnet,
 			ProtocolIDs:   []string{"0xe8f3e1e3"},
 		},
 	},
 	ProjectLitecoin: {
 		NetworkMainnet: {
-			Bootstrappers: BootstrapPeersLitecoin,
+			Bootstrappers: BootstrapPeersLitecoinMainnet,
 			ProtocolIDs:   []string{"0xdbb6c0fb"},
 		},
 	},
 	ProjectDogecoin: {
 		NetworkMainnet: {
-			Bootstrappers: BootstrapPeersDogecoin,
+			Bootstrappers: BootstrapPeersDogecoinMainnet,
 			ProtocolIDs:   []string{"0xc0c0c0c0"},
 		},
 	},
 	ProjectZCash: {
 		NetworkMainnet: {
-			Bootstrappers: BootstrapPeersZCash,
+			Bootstrappers: BootstrapPeersZCashMainnet,
 			// The wire bytes are 24 e9 27 64; as a little-endian uint32 that
 			// is 0x6427e924.
 			ProtocolIDs: []string{"0x6427e924"},
@@ -209,7 +213,7 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 	},
 	ProjectDria: {
 		NetworkMainnet: {
-			Bootstrappers: BootstrapPeersDria,
+			Bootstrappers: BootstrapPeersDriaMainnet,
 			ProtocolIDs:   []string{"/dria/kad/0.2"},
 		},
 	},
@@ -232,7 +236,7 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 	ProjectHyperDHT: {
 		NetworkMainnet: {
 			// The entries use the dht-rpc "ip@host:port" form.
-			Bootstrappers: BootstrapPeersHyperDHT,
+			Bootstrappers: BootstrapPeersHyperDHTMainnet,
 			ProtocolIDs:   []string{"hyperdht"},
 		},
 	},
