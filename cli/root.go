@@ -27,6 +27,8 @@ const (
 type RootCommand struct {
 	cmd *cli.Command
 	cfg *RootCommandConfig
+
+	completing bool // completing is true while the run answers a shell completion request.
 }
 
 type RootCommandConfig struct {
@@ -37,6 +39,7 @@ type RootCommandConfig struct {
 	ShutdownGrace time.Duration
 	EnvPrefix     string
 	AWSRegion     string
+	NoBanner      bool
 
 	metricsShutdown func(ctx context.Context) error
 	tracesShutdown  func(ctx context.Context) error
@@ -96,6 +99,14 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 			Usage:       "Compute the source code position of a log statement and add a SourceKey attribute to the output.",
 			Destination: &cfg.Log.Source,
 			Value:       cfg.Log.Source,
+			Category:    flagCategoryLogging,
+		},
+		&cli.BoolFlag{
+			Name:        "noBanner",
+			Sources:     cli.EnvVars(cfg.EnvPrefix + "NO_BANNER"),
+			Usage:       "Print the \"" + strings.ToUpper(cmd.Name) + "\" banner on start.",
+			Destination: &cfg.NoBanner,
+			Value:       cfg.NoBanner,
 			Category:    flagCategoryLogging,
 		},
 		&cli.BoolFlag{
@@ -265,6 +276,13 @@ func (r *RootCommand) before(ctx context.Context, c *cli.Command) error {
 	// use initialized logger for everything
 	slog.SetDefault(slogger)
 
+	// The banner goes to stderr like the logs, so stdout stays clean for
+	// output that other programs read. A completion request skips it, else
+	// it would show on every tab press.
+	if !r.cfg.NoBanner && !r.completing {
+		_, _ = fmt.Fprint(r.cmd.ErrWriter, banner(r.cmd.Name, time.Now().Year()))
+	}
+
 	slog.Debug("Starting " + r.cmd.Name + "...")
 
 	// print all environment variables
@@ -289,24 +307,21 @@ func (r *RootCommand) before(ctx context.Context, c *cli.Command) error {
 }
 
 func (r *RootCommand) Run() error {
-	ctx, cancel := signalContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
-	return r.cmd.Run(ctx, os.Args)
+	return r.RunWithContextAndArgs(context.Background(), os.Args)
 }
 
 func (r *RootCommand) RunWithContext(ctx context.Context) error {
-	// the main application context
-	ctx, cancel := signalContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
-	return r.cmd.Run(ctx, os.Args)
+	return r.RunWithContextAndArgs(ctx, os.Args)
 }
 
 func (r *RootCommand) RunWithContextAndArgs(ctx context.Context, args []string) error {
 	// the main application context
 	ctx, cancel := signalContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+
+	// The shell asks for completions with this flag as the last argument.
+	// The cli package keeps that state private, so check the same way.
+	r.completing = r.cmd.EnableShellCompletion && len(args) > 0 && args[len(args)-1] == "--generate-shell-completion"
 
 	return r.cmd.Run(ctx, args)
 }

@@ -34,6 +34,7 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 
 **cli/**: Command-line interface utilities
 - `cli/root.go`: Core CLI framework using urfave/cli/v3 with built-in telemetry, logging, and graceful shutdown
+- `cli/banner.go`: on start, the root command writes its name in the ANSI Shadow figlet font and "powered by ProbeLab · <year>" to stderr; `--no-banner` (`<NAME>_NO_BANNER`) turns it off, and help and shell completion requests skip it
 - `cli/pg.go`: PostgreSQL CLI configuration flags and setup
 - `cli/ch.go`: ClickHouse CLI configuration flags and setup
 - `cli/health.go`: Health check CLI utilities
