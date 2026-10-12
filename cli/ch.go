@@ -61,6 +61,7 @@ func ClickHouseMultiFlags(envPrefix string, cfg *db.ClickHouseMultiConfig) []cli
 // users to specify a comprehensive set of options for establishing connections
 // to one or more ClickHouse databases.
 func ClickHouseBaseFlags(envPrefix string, cfg *db.ClickHouseBaseConfig) []cli.Flag {
+	envPrefix = buildEnvPrefix(envPrefix)
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:        "clickhouse.host",
@@ -107,6 +108,7 @@ func ClickHouseBaseFlags(envPrefix string, cfg *db.ClickHouseBaseConfig) []cli.F
 
 // ClickHouseMigrationsFlags returns CLI flags for configuring ClickHouse migrations.
 func ClickHouseMigrationsFlags(envPrefix string, cfg *db.ClickHouseMigrationsConfig) []cli.Flag {
+	envPrefix = buildEnvPrefix(envPrefix)
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:        "clickhouse.cluster",

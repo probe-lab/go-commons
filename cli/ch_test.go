@@ -2,10 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli/v3"
 
 	"github.com/probe-lab/go-commons/db"
 )
@@ -102,6 +104,36 @@ func TestClickHouseBaseConfig_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.cfgFn().Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestDatabaseFlagsEnvPrefix(t *testing.T) {
+	tests := []struct {
+		prefix string
+		want   string
+	}{
+		{prefix: "nebula", want: "NEBULA_"},
+		{prefix: "NEBULA_", want: "NEBULA_"},
+		{prefix: "", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.prefix, func(t *testing.T) {
+			var flags []cli.Flag
+			flags = append(flags, ClickHouseFlags(tt.prefix, db.DefaultClickHouseConfig("test"))...)
+			flags = append(flags, ClickHouseMultiFlags(tt.prefix, db.DefaultClickHouseMultiConfig("test"))...)
+			flags = append(flags, ClickHouseBaseFlags(tt.prefix, validBaseCfgFn())...)
+			flags = append(flags, ClickHouseMigrationsFlags(tt.prefix, db.DefaultClickHouseMigrationsConfig())...)
+			flags = append(flags, PostgresFlags(tt.prefix, &db.PostgresConfig{BaseConfig: &db.PostgresBaseConfig{}})...)
+			flags = append(flags, PostgresMultiFlags(tt.prefix, &db.PostgresMultiConfig{BaseConfig: &db.PostgresBaseConfig{}})...)
+
+			for _, f := range flags {
+				for _, env := range f.(interface{ GetEnvVars() []string }).GetEnvVars() {
+					rest, ok := strings.CutPrefix(env, tt.want)
+					assert.True(t, ok && (strings.HasPrefix(rest, "CLICKHOUSE_") || strings.HasPrefix(rest, "POSTGRES_")), env)
+				}
 			}
 		})
 	}
