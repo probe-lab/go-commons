@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/probe-lab/ecs-exporter/ecscollector"
 	"github.com/probe-lab/ecs-exporter/ecsmetadata"
+	"github.com/probe-lab/ecs-exporter/enacollector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	prombridge "go.opentelemetry.io/contrib/bridges/prometheus"
@@ -185,7 +186,7 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func initMeterProvider(cfg *MetricsConfig) (*sdkmetric.MeterProvider, error) {
-	if err := registerECSCollector(); err != nil {
+	if err := registerAWSCollectors(); err != nil {
 		return nil, err
 	}
 
@@ -213,7 +214,7 @@ func initMeterProvider(cfg *MetricsConfig) (*sdkmetric.MeterProvider, error) {
 // pushMetrics installs a meter provider that pushes over OTLP gRPC instead
 // of serving an endpoint.
 func pushMetrics(cfg *MetricsConfig) (func(ctx context.Context) error, error) {
-	if err := registerECSCollector(); err != nil {
+	if err := registerAWSCollectors(); err != nil {
 		return nil, err
 	}
 
@@ -230,8 +231,8 @@ func pushMetrics(cfg *MetricsConfig) (func(ctx context.Context) error, error) {
 		return nil, fmt.Errorf("new metrics resource: %w", err)
 	}
 
-	// The default prometheus registry holds the Go runtime, process, and
-	// ECS collectors that the scrape endpoint serves; the bridge pushes
+	// The default prometheus registry holds the Go runtime, process, ENA,
+	// and ECS collectors that the scrape endpoint serves; the bridge pushes
 	// them too.
 	readerOpts := []sdkmetric.PeriodicReaderOption{
 		sdkmetric.WithProducer(prombridge.NewMetricProducer()),
@@ -301,20 +302,25 @@ func namespaceView(ns string) sdkmetric.View {
 	}
 }
 
-// registerECSCollector registers the AWS Elastic Container Service
-// collector with the default prometheus registry. Outside of ECS it does
-// nothing.
-func registerECSCollector() error {
-	client, err := ecsmetadata.NewClientFromEnvironment()
-	if err != nil {
-		// not running in ECS
-		return nil
+// registerAWSCollectors registers the AWS collectors with the default
+// prometheus registry: the Elastic Network Adapter (ENA) collector, which
+// exports nothing on hosts without ENA interfaces, and the Elastic Container
+// Service (ECS) collector when the process runs in ECS. A collector that an
+// earlier call registered stays registered.
+func registerAWSCollectors() error {
+	collectors := []prometheus.Collector{enacollector.NewCollector(slog.Default())}
+
+	if client, err := ecsmetadata.NewClientFromEnvironment(); err == nil {
+		slog.Debug("Registering ECS collector")
+		collectors = append(collectors, ecscollector.NewCollector(client, slog.Default()))
 	}
 
-	slog.Debug("Registering ECS collector")
-	collector := ecscollector.NewCollector(client, slog.Default())
-	if err := prometheus.DefaultRegisterer.Register(collector); err != nil {
-		return fmt.Errorf("register collector: %w", err)
+	for _, collector := range collectors {
+		err := prometheus.DefaultRegisterer.Register(collector)
+		var alreadyErr prometheus.AlreadyRegisteredError
+		if err != nil && !errors.As(err, &alreadyErr) {
+			return fmt.Errorf("register collector: %w", err)
+		}
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package tele
 import (
 	"context"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -10,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/probe-lab/ecs-exporter/enacollector"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -76,6 +79,14 @@ func TestServeMetricsReturnsBindError(t *testing.T) {
 
 	_, err = ServeMetrics(cfg)
 	require.ErrorContains(t, err, "listen on")
+}
+
+func TestRegisterAWSCollectors(t *testing.T) {
+	require.NoError(t, registerAWSCollectors())
+	require.NoError(t, registerAWSCollectors(), "a second call keeps the registered collectors")
+
+	err := prometheus.DefaultRegisterer.Register(enacollector.NewCollector(slog.Default()))
+	require.ErrorAs(t, err, &prometheus.AlreadyRegisteredError{}, "the ENA collector is registered outside of ECS too")
 }
 
 func TestServeMetricsDisabled(t *testing.T) {
