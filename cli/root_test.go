@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"net"
+	"runtime/debug"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -32,8 +32,7 @@ func TestNewRootCommand(t *testing.T) {
 
 	root, cfg := NewRootCommand(cmd)
 	require.Equal(t, "APP_", cfg.EnvPrefix)
-	require.True(t, strings.HasPrefix(cmd.Version, "1.2.3"), "the version keeps what the command declared")
-	require.NotEqual(t, "1.2.3-", cmd.Version, "no dangling separator without a commit")
+	require.Equal(t, "1.2.3", cmd.Version, "the version stays as the command declared it")
 	require.Equal(t, cmd.Version, cfg.Metrics.Version, "the metrics resource carries the command version")
 	require.Equal(t, cmd.Version, cfg.Trace.Version, "the trace resource carries the command version")
 
@@ -41,6 +40,16 @@ func TestNewRootCommand(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ran)
 	require.Equal(t, "debug", cfg.Log.Level)
+}
+
+func TestNewRootCommandModuleVersion(t *testing.T) {
+	cmd := &cli.Command{Name: "app"}
+	_, cfg := NewRootCommand(cmd)
+
+	info, ok := debug.ReadBuildInfo()
+	require.True(t, ok)
+	require.Equal(t, info.Main.Version, cfg.BuildInfo.Version)
+	require.Equal(t, info.Main.Version, cmd.Version, "without a declared version the command reports the module version")
 }
 
 func TestTracingFlags(t *testing.T) {

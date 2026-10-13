@@ -33,7 +33,7 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 ### Package Structure
 
 **cli/**: Command-line interface utilities
-- `cli/root.go`: Core CLI framework using urfave/cli/v3 with built-in telemetry, logging, and graceful shutdown
+- `cli/root.go`: Core CLI framework using urfave/cli/v3 with built-in telemetry, logging, and graceful shutdown; a command that declares no `Version` reports the main module version Go records at build time (`v1.2.3` at a tag, a pseudo-version after it, `+dirty` for local changes; v2 and up need a `/vN` module path)
 - `cli/banner.go`: on start, the root command writes its name in the ANSI Shadow figlet font and "powered by ProbeLab · <year>" to stderr; `--noBanner` (`<NAME>_NO_BANNER`) turns it off, and help and shell completion requests skip it
 - `cli/pg.go`: PostgreSQL CLI configuration flags and setup
 - `cli/ch.go`: ClickHouse CLI configuration flags and setup

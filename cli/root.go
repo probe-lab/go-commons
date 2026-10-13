@@ -59,19 +59,10 @@ func NewRootCommand(cmd *cli.Command) (*RootCommand, *RootCommandConfig) {
 		tracesShutdown:  func(ctx context.Context) error { return nil },
 	}
 
-	// A binary built with `go run` or outside a checkout carries no VCS
-	// stamp; then the version stays as the command declared it.
-	shortCommit := cfg.BuildInfo.ShortCommit()
-	if shortCommit != "" && cfg.BuildInfo.Dirty {
-		shortCommit += "+dirty"
-	}
-
-	switch {
-	case shortCommit == "":
-	case cmd.Version == "":
-		cmd.Version = shortCommit
-	default:
-		cmd.Version += "-" + shortCommit
+	// Without a declared version, the command reports the version Go
+	// recorded for the main module; see BuildInfo.Version.
+	if cmd.Version == "" {
+		cmd.Version = cfg.BuildInfo.Version
 	}
 	cfg.Metrics.Version = cmd.Version
 	cfg.Trace.Version = cmd.Version
@@ -381,8 +372,16 @@ func buildEnvPrefix(name string) string {
 }
 
 type BuildInfo struct {
-	Commit string
-	Dirty  bool
+	// Version is the version Go recorded for the main module. go build
+	// takes it from the VCS tags: v1.2.3 at a tag, a pseudo-version with the
+	// commit time and hash after it, and a +dirty suffix for uncommitted
+	// changes. A tag counts only if its major version matches the module
+	// path (v2 and up need a /vN suffix). go run, go test, and builds
+	// without VCS data record (devel); go install module@version records
+	// that version.
+	Version string
+	Commit  string
+	Dirty   bool
 }
 
 func (bi *BuildInfo) ShortCommit() string {
@@ -396,6 +395,7 @@ func (bi *BuildInfo) ShortCommit() string {
 func buildInfo() *BuildInfo {
 	bi := &BuildInfo{}
 	if info, ok := debug.ReadBuildInfo(); ok {
+		bi.Version = info.Main.Version
 		for _, setting := range info.Settings {
 			switch setting.Key {
 			case "vcs.revision":
