@@ -105,12 +105,6 @@ func (m *mockConn) QueryFormat(_ context.Context, _, _ string, _ ...any) (io.Rea
 	return nil, nil
 }
 
-func (m *mockConn) QueryFormat(_ context.Context, _, _ string, _ ...any) (io.ReadCloser, error) {
-	return nil, nil
-}
-
-func (m *mockConn) InsertFormat(_ context.Context, _, _ string, _ io.Reader) error { return nil }
-
 // testRow is a minimal struct used as the generic type T in tests.
 type testRow struct {
 	Value int
