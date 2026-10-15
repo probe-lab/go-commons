@@ -570,6 +570,8 @@ var (
 	// them only answer find_node and store no data. Extracted from:
 	//  https://github.com/anacrolix/dht/blob/master/dht.go (DefaultGlobalBootstrapHostPorts)
 	//  https://github.com/arvidn/libtorrent/blob/RC_2_0/src/settings_pack.cpp (dht_bootstrap_nodes)
+	// The anacrolix list also has dht.anacrolix.link:42069 and
+	// router.bittorrent.cloud:42069. Neither answers, so they are left out.
 	BootstrapPeersBitTorrentMainnet = []string{
 		"router.bittorrent.com:6881",
 		"router.utorrent.com:6881",
@@ -577,8 +579,6 @@ var (
 		"dht.libtorrent.org:25401",
 		"dht.aelitis.com:6881",
 		"router.silotis.us:6881",
-		"dht.anacrolix.link:42069",
-		"router.bittorrent.cloud:42069",
 	}
 
 	// BootstrapPeersTorMainnet are the DirPorts of the Tor directory
