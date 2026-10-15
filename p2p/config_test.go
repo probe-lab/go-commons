@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"net/netip"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,6 +51,11 @@ func TestConfig_Ethereum(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, cfg.Bootstrappers)
 		assert.Equal(t, []string{string(network)}, cfg.ProtocolIDs)
+
+		// geth lists both ENRs and enode URLs; crawlers must parse both.
+		for _, b := range cfg.Bootstrappers {
+			assert.True(t, strings.HasPrefix(b, "enr:") || strings.HasPrefix(b, "enode://"), b)
+		}
 	}
 }
 
