@@ -70,7 +70,7 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 - `grpc/server.go`: gRPC server with OpenTelemetry, health checks, panic recovery, and rate limiting
 
 **p2p/**: Well-known peer-to-peer networks
-- `p2p/config.go`: `GetBootstrapConfig(project, network)` returns bootstrappers and protocol IDs; Bitcoin-family protocol IDs are the network magic in hex, their bootstrappers are DNS seeds; HyperDHT bootstrappers use the dht-rpc `ip@host:port` form
+- `p2p/config.go`: `GetBootstrapConfig(project, network)` returns bootstrappers and protocol IDs; Bitcoin-family protocol IDs are the network magic in hex, their bootstrappers are DNS seeds; HyperDHT bootstrappers use the dht-rpc `ip@host:port` form, BitTorrent bootstrappers the `host:port` form
 - `p2p/bootstrap.go`: the bootstrap lists; this is the source of truth for Nebula
 
 **maddr/**: Multiaddress helpers (parse, filter public or private, merge, extract IP)

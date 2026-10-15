@@ -266,6 +266,13 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs:   []string{"hyperdht"},
 		},
 	},
+	ProjectBitTorrent: {
+		NetworkMainnet: {
+			// The Mainline DHT (BEP 5). The entries use the "host:port" form.
+			Bootstrappers: BootstrapPeersBitTorrentMainnet,
+			ProtocolIDs:   []string{"bep5"},
+		},
+	},
 	ProjectAlgorand: {
 		NetworkMainnet: {
 			Bootstrappers: BootstrapPeersAlgorandMainnet,

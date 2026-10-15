@@ -565,4 +565,20 @@ var (
 		"142.93.90.113@node2.hyperdht.org:49737",
 		"138.68.147.8@node3.hyperdht.org:49737",
 	}
+
+	// BootstrapPeersBitTorrentMainnet are well-known bootstrap nodes
+	// ("routers") of the BitTorrent Mainline DHT in "host:port" form. Most of
+	// them only answer find_node and store no data. Extracted from:
+	//  https://github.com/anacrolix/dht/blob/master/dht.go (DefaultGlobalBootstrapHostPorts)
+	//  https://github.com/arvidn/libtorrent/blob/RC_2_0/src/settings_pack.cpp (dht_bootstrap_nodes)
+	BootstrapPeersBitTorrentMainnet = []string{
+		"router.bittorrent.com:6881",
+		"router.utorrent.com:6881",
+		"dht.transmissionbt.com:6881",
+		"dht.libtorrent.org:25401",
+		"dht.aelitis.com:6881",
+		"router.silotis.us:6881",
+		"dht.anacrolix.link:42069",
+		"router.bittorrent.cloud:42069",
+	}
 )
