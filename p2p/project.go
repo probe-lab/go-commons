@@ -28,4 +28,5 @@ const (
 	ProjectRavencoin   Project = "ravencoin"
 	ProjectFlux        Project = "flux"
 	ProjectHyperDHT    Project = "hyperdht"
+	ProjectBitTorrent  Project = "bittorrent"
 )

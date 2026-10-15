@@ -115,3 +115,10 @@ func TestConfig_HyperDHT_Mainnet(t *testing.T) {
 	assert.Equal(t, []string{"hyperdht"}, cfg.ProtocolIDs)
 	assert.Contains(t, cfg.Bootstrappers, "88.99.3.86@node1.hyperdht.org:49737")
 }
+
+func TestConfig_BitTorrent_Mainnet(t *testing.T) {
+	cfg, err := GetBootstrapConfig(ProjectBitTorrent, NetworkMainnet)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"bep5"}, cfg.ProtocolIDs)
+	assert.Contains(t, cfg.Bootstrappers, "router.bittorrent.com:6881")
+}
