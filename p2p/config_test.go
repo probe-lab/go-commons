@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"net/netip"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -121,4 +122,15 @@ func TestConfig_BitTorrent_Mainnet(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"bep5"}, cfg.ProtocolIDs)
 	assert.Contains(t, cfg.Bootstrappers, "router.bittorrent.com:6881")
+}
+
+func TestConfig_Tor_Mainnet(t *testing.T) {
+	cfg, err := GetBootstrapConfig(ProjectTor, NetworkMainnet)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"tor"}, cfg.ProtocolIDs)
+	assert.Len(t, cfg.Bootstrappers, 9)
+	for _, b := range cfg.Bootstrappers {
+		_, err := netip.ParseAddrPort(b)
+		assert.NoError(t, err, b)
+	}
 }
