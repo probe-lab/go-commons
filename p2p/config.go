@@ -227,6 +227,16 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs:   []string{"0x4e564152"},
 		},
 	},
+	ProjectFlux: {
+		NetworkMainnet: {
+			Bootstrappers: BootstrapPeersFluxMainnet,
+			// Flux forked from Zcash and kept its network magic, so this
+			// is the magic of ProjectZCash too. Crawlers have to tell
+			// the two networks apart by other means, for example by the
+			// protocol version.
+			ProtocolIDs: []string{"0x6427e924"},
+		},
+	},
 	ProjectDria: {
 		NetworkMainnet: {
 			Bootstrappers: BootstrapPeersDriaMainnet,

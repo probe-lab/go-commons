@@ -26,5 +26,6 @@ const (
 	ProjectDash        Project = "dash"
 	ProjectDigiByte    Project = "digibyte"
 	ProjectRavencoin   Project = "ravencoin"
+	ProjectFlux        Project = "flux"
 	ProjectHyperDHT    Project = "hyperdht"
 )

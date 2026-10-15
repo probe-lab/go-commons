@@ -100,6 +100,7 @@ func TestConfig_BitcoinFamily(t *testing.T) {
 		ProjectDash:        "0xbd6b0cbf",
 		ProjectDigiByte:    "0xdab6c3fa",
 		ProjectRavencoin:   "0x4e564152",
+		ProjectFlux:        "0x6427e924",
 	} {
 		cfg, err := GetBootstrapConfig(project, NetworkMainnet)
 		require.NoError(t, err)
