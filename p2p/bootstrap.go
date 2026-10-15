@@ -415,6 +415,14 @@ var (
 		"seed-raven.ravencoin.org",
 	}
 
+	// BootstrapPeersFluxMainnet extracted from fluxd:
+	// https://github.com/RunOnFlux/fluxd/blob/master/src/chainparams.cpp
+	BootstrapPeersFluxMainnet = []string{
+		"dnsseed.asoftwaresolution.com",
+		"dnsseed.zel.network",
+		"dnsseed.runonflux.io",
+	}
+
 	// BootstrapPeersPortalMainnet extracted from:
 	//	https://github.com/status-im/portal-mainnet/blob/master/config/bootstrap_nodes.txt
 	//  https://github.com/ethereum/portal-network-specs/blob/master/bootnodes.md
