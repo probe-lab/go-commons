@@ -273,6 +273,15 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs:   []string{"bep5"},
 		},
 	},
+	ProjectTor: {
+		NetworkMainnet: {
+			// The bootstrappers are the DirPorts of the directory
+			// authorities. Tor has no protocol ID; "tor" names the
+			// network.
+			Bootstrappers: BootstrapPeersTorMainnet,
+			ProtocolIDs:   []string{"tor"},
+		},
+	},
 	ProjectAlgorand: {
 		NetworkMainnet: {
 			Bootstrappers: BootstrapPeersAlgorandMainnet,

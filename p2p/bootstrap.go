@@ -581,4 +581,21 @@ var (
 		"dht.anacrolix.link:42069",
 		"router.bittorrent.cloud:42069",
 	}
+
+	// BootstrapPeersTorMainnet are the DirPorts of the Tor directory
+	// authorities in "host:port" form. Tor has no DHT to bootstrap from: a
+	// crawler fetches the consensus, the list of all running relays, from
+	// one of them. Source: src/app/config/auth_dirs.inc of tor,
+	// https://gitlab.torproject.org/tpo/core/tor/-/blob/main/src/app/config/auth_dirs.inc
+	BootstrapPeersTorMainnet = []string{
+		"128.31.0.39:9231",  // moria1
+		"217.196.147.77:80", // tor26
+		"45.66.35.11:80",    // dizum
+		"131.188.40.189:80", // gabelmoo
+		"193.23.244.244:80", // dannenberg
+		"171.25.193.9:443",  // maatuska
+		"199.58.81.140:80",  // longclaw
+		"204.13.164.118:80", // bastet
+		"216.218.219.41:80", // faravahar
+	}
 )
