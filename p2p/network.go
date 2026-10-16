@@ -23,4 +23,5 @@ const (
 	NetworkTuringLC    Network = "turing_lc"
 	NetworkStatus      Network = "status"
 	NetworkTWN         Network = "twn"
+	NetworkLightning   Network = "lightning"
 )
