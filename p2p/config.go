@@ -176,11 +176,19 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 	},
 	// The Bitcoin family lists DNS seeds as bootstrappers. The protocol ID is
 	// the network magic as a little-endian uint32 in hex, the value btcd's
-	// wire.BitcoinNet carries.
+	// wire.BitcoinNet carries. The Lightning Network is the exception.
 	ProjectBitcoin: {
 		NetworkMainnet: {
 			Bootstrappers: BootstrapPeersBitcoinMainnet,
 			ProtocolIDs:   []string{"0xd9b4bef9"},
+		},
+		// The Lightning Network on Bitcoin mainnet. The bootstrappers use
+		// the "node_id@host:port" form. The protocol ID is the chain hash in
+		// hex as Lightning messages carry it (BOLT 7): the genesis block
+		// hash in the byte order of the block header.
+		NetworkLightning: {
+			Bootstrappers: BootstrapPeersBitcoinLightning,
+			ProtocolIDs:   []string{"6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000"},
 		},
 	},
 	ProjectBitcoinCash: {
