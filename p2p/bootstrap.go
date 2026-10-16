@@ -363,6 +363,44 @@ var (
 		"seed.mainnet.achownodes.xyz",   // Ava Chow
 	}
 
+	// BootstrapPeersBitcoinLightning are nodes of the Lightning Network on
+	// Bitcoin mainnet in the "node_id@host:port" form of lnd and Core
+	// Lightning: the hex compressed secp256k1 key of the node, then its
+	// address. A Lightning connection needs the key of the node before the
+	// first byte (BOLT 8), so DNS seeds or plain addresses are not enough.
+	// These nodes hold the public channel graph and answer gossip queries
+	// (BOLT 7); a crawler downloads the graph from one of them. The list is
+	// the fallback list that Electrum uses to fetch gossip, as of 2026-10-16:
+	// https://github.com/spesmilo/electrum/blob/master/electrum/chains/mainnet/fallback_lnnodes.json
+	BootstrapPeersBitcoinLightning = []string{
+		"0294ac3e099def03c12a37e30fe5364b1223fd60069869142ef96580c8439c2e0a@8.210.134.135:26658",
+		"03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f@3.33.236.230:9735",
+		"03cde60a6323f7122d5178255766e38114b4722ede08f7c9e0c5df9b912cc201d6@34.65.85.39:9745",
+		"027100442c3b79f606f80f322d98d499eefcb060599efc5d4ecb00209c2cb54190@3.230.33.224:9735",
+		"033d8656219478701227199cbd6f670335c8d408a92ae88b962c49d4dc0e83e025@34.65.85.39:9735",
+		"02f1a8c87607f415c8f22c00593002775941dea48869ce23096af27b0cfdcc0b69@52.13.118.208:9735",
+		"034ea80f8b148c750463546bd999bf7321a0e6dfc60aaf84bd0400a2e8d376c0d5@213.174.156.79:9735",
+		"033e9ce4e8f0e68f7db49ffb6b9eecc10605f3f3fcb3c630545887749ab515b9c7@213.174.156.72:9735",
+		"035e4ff418fc8b5554c5d9eea66396c227bd429a3251c8cbc711002ba215bfc226@170.75.163.209:9735",
+		"037659a0ac8eb3b8d0a720114efc861d3a940382dcfa1403746b4f8f6b2e8810ba@34.78.139.195:9735",
+		"03a93b87bf9f052b8e862d51ebbac4ce5e97b5f4137563cd5128548d7f5978dda9@134.209.139.244:9735",
+		"0288be11d147e1525f7f234f304b094d6627d2c70f3313d7ba3696887b261c4447@18.219.93.203:9735",
+		"0322d0e43b3d92d30ed187f4e101a9a9605c3ee5fc9721e6dac3ce3d7732fbb13e@164.92.106.32:9735",
+		"02c197ffa4c2aa4105dd4c4b7279ba1b9061b22910ebbfa759b0001bed9ee48a16@18.181.210.139:9735",
+		"03c8e5f583585cac1de2b7503a6ccd3c12ba477cfd139cd4905be504c2f48e86bd@34.73.189.183:9735",
+		"021c97a90a411ff2b10dc2a8e32de2f29d2fa49d41bfbb52bd416e460db0747d0d@54.184.88.251:9735",
+		"037f990e61acee8a7697966afd29dd88f3b1f8a7b14d625c4f8742bd952003a590@185.5.53.91:9735",
+		"0326e692c455dd554c709bbb470b0ca7e0bb04152f777d1445fd0bf3709a2833a3@57.129.59.146:9735",
+		"02e4971e61a3f55718ae31e2eed19aaf2e32caf3eb5ef5ff03e01aa3ada8907e78@52.38.27.190:9735",
+		"0391904d140fdf88d19423513945a5fcc49c606521b65a85f6d6fe46ebdd1c7665@5.75.184.195:35933",
+		"026165850492521f4ac8abd9bd8088123446d126f648ca35e60f88177dc149ceb2@45.86.229.190:9735",
+		"027ce055380348d7812d2ae7745701c9f93e70c1adeb2657f053f91df4f2843c71@157.90.112.145:9735",
+		"029efe15ef5f0fcc2fdd6b910405e78056b28c9b64e1feff5f13b8dce307e67cad@103.126.161.206:9742",
+		"03abf6f44c355dec0d5aa155bdbdd6e0c8fefe318eff402de65c6eb2e1be55dc3e@3.132.230.42:9735",
+		"03271338633d2d37b285dae4df40b413d8c6c791fbee7797bc5dc70812196d7d5c@63.35.146.37:9735",
+		"03037dc08e9ac63b82581f79b662a4d0ceca8a8ca162b1af3551595b8f2d97b70a@34.68.41.206:9735",
+	}
+
 	// BootstrapPeersBitcoinCashMainnet extracted from Bitcoin Cash Node:
 	// https://gitlab.com/bitcoin-cash-node/bitcoin-cash-node/-/blob/master/src/chainparams.cpp
 	BootstrapPeersBitcoinCashMainnet = []string{
