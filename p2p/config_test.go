@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"encoding/hex"
 	"net/netip"
 	"strings"
 	"testing"
@@ -137,6 +138,25 @@ func TestConfig_Tor_Mainnet(t *testing.T) {
 	assert.Len(t, cfg.Bootstrappers, 9)
 	for _, b := range cfg.Bootstrappers {
 		_, err := netip.ParseAddrPort(b)
+		assert.NoError(t, err, b)
+	}
+}
+
+func TestConfig_Bitcoin_Lightning(t *testing.T) {
+	cfg, err := GetBootstrapConfig(ProjectBitcoin, NetworkLightning)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000"}, cfg.ProtocolIDs)
+	assert.NotEmpty(t, cfg.Bootstrappers)
+
+	// Each entry is the hex compressed key of the node, "@", and host:port.
+	for _, b := range cfg.Bootstrappers {
+		key, addr, ok := strings.Cut(b, "@")
+		require.True(t, ok, b)
+		raw, err := hex.DecodeString(key)
+		require.NoError(t, err, b)
+		require.Len(t, raw, 33, b)
+		assert.Contains(t, []byte{0x02, 0x03}, raw[0], b)
+		_, err = netip.ParseAddrPort(addr)
 		assert.NoError(t, err, b)
 	}
 }
