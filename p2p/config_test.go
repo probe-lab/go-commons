@@ -35,7 +35,7 @@ func TestConfig_Polkadot_Mainnet(t *testing.T) {
 	cfg, err := GetBootstrapConfig(ProjectPolkadot, NetworkMainnet)
 	require.NoError(t, err)
 	assert.NotEmpty(t, cfg.Bootstrappers)
-	assert.Len(t, cfg.ProtocolIDs, 2)
+	assert.Equal(t, []string{"/91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3/kad"}, cfg.ProtocolIDs)
 }
 
 func TestConfig_Agntcy_Mainnet(t *testing.T) {
