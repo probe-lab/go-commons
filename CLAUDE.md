@@ -70,10 +70,10 @@ This is a Go commons library (`github.com/probe-lab/go-commons`) containing reus
 - `grpc/server.go`: gRPC server with OpenTelemetry, health checks, panic recovery, and rate limiting
 
 **p2p/**: Well-known peer-to-peer networks
-- `p2p/config.go`: `GetBootstrapConfig(project, network)` returns bootstrappers and protocol IDs; Bitcoin-family protocol IDs are the network magic in hex, their bootstrappers are DNS seeds; HyperDHT bootstrappers use the dht-rpc `ip@host:port` form, BitTorrent bootstrappers the `host:port` form; Tor bootstrappers are the `host:port` DirPorts of the directory authorities; the Ethereum discv4 bootstrappers mix ENRs and enode URLs, as geth's list does
+- `p2p/config.go`: `GetBootstrapConfig(project, network)` returns bootstrappers and protocol IDs; Bitcoin-family protocol IDs are the network magic in hex, their bootstrappers are DNS seeds; HyperDHT bootstrappers use the dht-rpc `ip@host:port` form, BitTorrent bootstrappers the `host:port` form; Tor bootstrappers are the `host:port` DirPorts of the directory authorities; the Ethereum discv4 bootstrappers mix ENRs and enode URLs, as geth's list does; the Filecoin lists have `/dnsaddr` entries without a peer ID, which `maddr.ResolveDNSAddr` expands
 - `p2p/bootstrap.go`: the bootstrap lists; this is the source of truth for Nebula
 
-**maddr/**: Multiaddress helpers (parse, filter public or private, merge, extract IP)
+**maddr/**: Multiaddress helpers (parse, filter public or private, merge, extract IP, resolve a `/dnsaddr` entry one level into the listed addresses that end in `/p2p/`)
 
 **ptr/**: Pointer utilities
 - `ptr/ptr.go`: Generic `From[T]` function that returns `nil` for zero values, otherwise a pointer to the value

@@ -10,6 +10,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/lmittmann/tint v1.2.1
 	github.com/multiformats/go-multiaddr v0.16.1
+	github.com/multiformats/go-multiaddr-dns v0.6.0
 	github.com/probe-lab/ecs-exporter v0.6.0-probelab.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/stretchr/testify v1.12.1
