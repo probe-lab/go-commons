@@ -53,11 +53,30 @@ func TestConfig_Ethereum(t *testing.T) {
 		assert.NotEmpty(t, cfg.Bootstrappers)
 		assert.Equal(t, []string{string(network)}, cfg.ProtocolIDs)
 
-		// geth lists both ENRs and enode URLs; crawlers must parse both.
+		// The lists mix ENRs and enode URLs; crawlers must parse both.
+		seen := map[string]bool{}
 		for _, b := range cfg.Bootstrappers {
 			assert.True(t, strings.HasPrefix(b, "enr:") || strings.HasPrefix(b, "enode://"), b)
+			assert.False(t, seen[b], "duplicate bootstrapper %s", b)
+			seen[b] = true
 		}
 	}
+}
+
+// The DHT lists keep every entry of the upstream Ethereum lists.
+func TestConfig_Ethereum_KeepsUpstreamLists(t *testing.T) {
+	discv4 := MustBootstrapConfig(ProjectEthereum, NetworkDiscv4).Bootstrappers
+	discv5 := MustBootstrapConfig(ProjectEthereum, NetworkDiscv5).Bootstrappers
+
+	for _, b := range BootstrapPeersEthereumExecution {
+		assert.Contains(t, discv4, b)
+		assert.Contains(t, discv5, b)
+	}
+	for _, b := range BootstrapPeersEthereumConsensus {
+		assert.Contains(t, discv5, b)
+	}
+	assert.Greater(t, len(discv4), len(BootstrapPeersEthereumExecution))
+	assert.Greater(t, len(discv5), len(BootstrapPeersEthereumConsensus)+len(BootstrapPeersEthereumExecution))
 }
 
 func TestConfig_Unknown_Project(t *testing.T) {

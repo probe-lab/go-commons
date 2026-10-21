@@ -115,15 +115,19 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs:   []string{"/e143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e/kad"},
 		},
 	},
-	// An Ethereum network is named after its discovery protocol: discv5 finds the
-	// consensus layer, discv4 the execution layer.
+	// discv4 and discv5 are each one DHT that many chains share, so these two
+	// networks are named after the DHT, not after a chain or a layer. The
+	// discv4 DHT holds the execution layer nodes of Ethereum, Polygon, BNB
+	// Smart Chain, PulseChain, and other chains. The discv5 DHT holds execution
+	// and consensus layer nodes of Ethereum, Gnosis, the OP Stack chains, and
+	// others. Nodes show their chain in their ENR or in the devp2p handshake.
 	ProjectEthereum: {
 		NetworkDiscv5: {
-			Bootstrappers: BootstrapPeersEthereumConsensus,
+			Bootstrappers: BootstrapPeersDiscv5,
 			ProtocolIDs:   []string{"discv5"},
 		},
 		NetworkDiscv4: {
-			Bootstrappers: BootstrapPeersEthereumExecution,
+			Bootstrappers: BootstrapPeersDiscv4,
 			ProtocolIDs:   []string{"discv4"},
 		},
 		NetworkHolesky: {
