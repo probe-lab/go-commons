@@ -672,4 +672,15 @@ var (
 		"18.142.82.44:18888",
 		"18.163.230.203:18888",
 	}
+
+	// BootstrapPeersTronNile are the seed nodes of the TRON Nile testnet in
+	// "ip:port" form. Extracted from seed.node.ip.list in:
+	//  https://github.com/tron-nile-testnet/nile-testnet/blob/ebe5051207d7c97e8fcdc38ad6279860fba0e697/framework/src/main/resources/config-nile.conf
+	BootstrapPeersTronNile = []string{
+		"44.236.192.97:18888",
+		"44.236.125.107:18888",
+		"44.232.119.174:18888",
+		"52.39.105.180:18888",
+		"54.70.52.47:18888",
+	}
 )

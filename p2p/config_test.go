@@ -143,6 +143,18 @@ func TestConfig_Tron_Mainnet(t *testing.T) {
 	}
 }
 
+func TestConfig_Tron_Nile(t *testing.T) {
+	cfg, err := GetBootstrapConfig(ProjectTron, NetworkNile)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"201910292"}, cfg.ProtocolIDs)
+	assert.Len(t, cfg.Bootstrappers, 5)
+	for _, b := range cfg.Bootstrappers {
+		ap, err := netip.ParseAddrPort(b)
+		assert.NoError(t, err, b)
+		assert.Equal(t, uint16(18888), ap.Port(), b)
+	}
+}
+
 func TestConfig_Tor_Mainnet(t *testing.T) {
 	cfg, err := GetBootstrapConfig(ProjectTor, NetworkMainnet)
 	require.NoError(t, err)

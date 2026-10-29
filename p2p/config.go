@@ -288,6 +288,10 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			Bootstrappers: BootstrapPeersTronMainnet,
 			ProtocolIDs:   []string{"11111"},
 		},
+		NetworkNile: {
+			Bootstrappers: BootstrapPeersTronNile,
+			ProtocolIDs:   []string{"201910292"},
+		},
 	},
 	ProjectTor: {
 		NetworkMainnet: {
