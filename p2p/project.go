@@ -30,4 +30,5 @@ const (
 	ProjectTor         Project = "tor"
 	ProjectHyperDHT    Project = "hyperdht"
 	ProjectBitTorrent  Project = "bittorrent"
+	ProjectTron        Project = "tron"
 )
