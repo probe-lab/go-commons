@@ -9,7 +9,7 @@ import (
 )
 
 // SafePrintConfig JSON-formats any command configuration and logs it, redacting
-// secret fields (passwords, secrets and URL-embedded credentials) beforehand.
+// secret fields (see isSecretKey) and URL-embedded credentials beforehand.
 func SafePrintConfig(tag string, cfg any) {
 	dat, err := json.Marshal(cfg)
 	if err != nil {
@@ -81,10 +81,16 @@ func redactString(key, val string) string {
 	return redactURLCredentials(val)
 }
 
-// isSecretKey reports whether a field or variable name suggests a secret.
+// isSecretKey reports whether a field or variable name suggests a secret,
+// password, API key, token, credential or private key.
 func isSecretKey(key string) bool {
 	lower := strings.ToLower(key)
-	return strings.Contains(lower, "pass") || strings.Contains(lower, "secret")
+	for _, s := range []string{"pass", "secret", "apikey", "api_key", "token", "credential", "privkey", "private_key", "privatekey"} {
+		if strings.Contains(lower, s) {
+			return true
+		}
+	}
+	return false
 }
 
 func maskSecret(s string) string {
