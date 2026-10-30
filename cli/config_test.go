@@ -45,12 +45,16 @@ func TestRedactSecrets(t *testing.T) {
 		Timeout  int    `json:"passTimeout"`
 		DSN      string `json:"dsn"`
 		Nested   nested `json:"nested"`
+		APIKey   string `json:"TronScanAPIKey"`
+		Workers  int    `json:"workers"`
 	}{
 		User:     "alice",
 		Password: "mypassword",
 		Timeout:  5,
 		DSN:      "postgres://alice:mypassword@localhost:5432/db",
 		Nested:   nested{Secret: "topsecret"},
+		APIKey:   "abcdef",
+		Workers:  1000,
 	}
 
 	m := redactedJSON(t, cfg)
@@ -60,18 +64,38 @@ func TestRedactSecrets(t *testing.T) {
 	require.Equal(t, "***", m["passTimeout"], "non-string secrets are hidden whole")
 	require.Equal(t, "postgres://alice:my***@localhost:5432/db", m["dsn"])
 	require.Equal(t, "to***", m["nested"].(map[string]any)["secret"])
+	require.Equal(t, "ab***", m["TronScanAPIKey"])
+	require.EqualValues(t, 1000, m["workers"])
 }
 
 func TestRedactEnvVar(t *testing.T) {
 	cases := map[string]string{
-		"HOME=/home/alice":                       "HOME=/home/alice",
-		"NOEQUALS":                               "NOEQUALS",
-		"PG_PASSWORD=mypassword":                 "PG_PASSWORD=my***",
-		"PG_PASSWORD=":                           "PG_PASSWORD=***",
-		"AWS_SECRET_ACCESS_KEY=abc=def":          "AWS_SECRET_ACCESS_KEY=ab***",
-		"DSN=postgres://alice:mypassword@db/app": "DSN=postgres://alice:my***@db/app",
+		"HOME=/home/alice":                          "HOME=/home/alice",
+		"NOEQUALS":                                  "NOEQUALS",
+		"PG_PASSWORD=mypassword":                    "PG_PASSWORD=my***",
+		"PG_PASSWORD=":                              "PG_PASSWORD=***",
+		"AWS_SECRET_ACCESS_KEY=abc=def":             "AWS_SECRET_ACCESS_KEY=ab***",
+		"DSN=postgres://alice:mypassword@db/app":    "DSN=postgres://alice:my***@db/app",
+		"NEBULA_CRAWL_TRON_TRONSCAN_API_KEY=abcdef": "NEBULA_CRAWL_TRON_TRONSCAN_API_KEY=ab***",
+		"NEBULA_CRAWL_WORKERS=1000":                 "NEBULA_CRAWL_WORKERS=1000",
+		"KEYSPACE=nebula":                           "KEYSPACE=nebula",
+		"NEBULA_CRAWL_TRON_TRONSCAN_URL=https://apilist.tronscanapi.com": "NEBULA_CRAWL_TRON_TRONSCAN_URL=https://apilist.tronscanapi.com",
 	}
 	for in, want := range cases {
 		require.Equal(t, want, redactEnvVar(in), "redactEnvVar(%q)", in)
+	}
+}
+
+func TestIsSecretKey(t *testing.T) {
+	cases := map[string]bool{
+		"NEBULA_CRAWL_TRON_TRONSCAN_API_KEY": true,
+		"TronScanAPIKey":                     true,
+		"NEBULA_CRAWL_WORKERS":               false,
+		"KEYSPACE":                           false,
+		"NEBULA_CRAWL_TRON_TRONSCAN_URL":     false,
+		"TronScanURL":                        false,
+	}
+	for in, want := range cases {
+		require.Equal(t, want, isSecretKey(in), "isSecretKey(%q)", in)
 	}
 }
