@@ -82,10 +82,10 @@ func redactString(key, val string) string {
 }
 
 // isSecretKey reports whether a field or variable name suggests a secret,
-// password, API key, token, credential or private key.
+// password or API key.
 func isSecretKey(key string) bool {
 	lower := strings.ToLower(key)
-	for _, s := range []string{"pass", "secret", "apikey", "api_key", "token", "credential", "privkey", "private_key", "privatekey"} {
+	for _, s := range []string{"pass", "secret", "apikey", "api_key"} {
 		if strings.Contains(lower, s) {
 			return true
 		}

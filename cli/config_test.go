@@ -46,7 +46,6 @@ func TestRedactSecrets(t *testing.T) {
 		DSN      string `json:"dsn"`
 		Nested   nested `json:"nested"`
 		APIKey   string `json:"TronScanAPIKey"`
-		GCPCreds string `json:"GCPCredentialsJSON"`
 		Workers  int    `json:"workers"`
 	}{
 		User:     "alice",
@@ -55,7 +54,6 @@ func TestRedactSecrets(t *testing.T) {
 		DSN:      "postgres://alice:mypassword@localhost:5432/db",
 		Nested:   nested{Secret: "topsecret"},
 		APIKey:   "abcdef",
-		GCPCreds: `{"type":"service_account"}`,
 		Workers:  1000,
 	}
 
@@ -67,23 +65,20 @@ func TestRedactSecrets(t *testing.T) {
 	require.Equal(t, "postgres://alice:my***@localhost:5432/db", m["dsn"])
 	require.Equal(t, "to***", m["nested"].(map[string]any)["secret"])
 	require.Equal(t, "ab***", m["TronScanAPIKey"])
-	require.Equal(t, `{"***`, m["GCPCredentialsJSON"])
 	require.EqualValues(t, 1000, m["workers"])
 }
 
 func TestRedactEnvVar(t *testing.T) {
 	cases := map[string]string{
-		"HOME=/home/alice":                                "HOME=/home/alice",
-		"NOEQUALS":                                        "NOEQUALS",
-		"PG_PASSWORD=mypassword":                          "PG_PASSWORD=my***",
-		"PG_PASSWORD=":                                    "PG_PASSWORD=***",
-		"AWS_SECRET_ACCESS_KEY=abc=def":                   "AWS_SECRET_ACCESS_KEY=ab***",
-		"DSN=postgres://alice:mypassword@db/app":          "DSN=postgres://alice:my***@db/app",
-		"NEBULA_CRAWL_TRON_TRONSCAN_API_KEY=abcdef":       "NEBULA_CRAWL_TRON_TRONSCAN_API_KEY=ab***",
-		"NEBULA_CRAWL_FILECOIN_GCP_CREDENTIALS={\"k\":1}": "NEBULA_CRAWL_FILECOIN_GCP_CREDENTIALS={\"***",
-		"GITHUB_TOKEN=ghp_abc":                            "GITHUB_TOKEN=gh***",
-		"NEBULA_CRAWL_WORKERS=1000":                       "NEBULA_CRAWL_WORKERS=1000",
-		"KEYSPACE=nebula":                                 "KEYSPACE=nebula",
+		"HOME=/home/alice":                          "HOME=/home/alice",
+		"NOEQUALS":                                  "NOEQUALS",
+		"PG_PASSWORD=mypassword":                    "PG_PASSWORD=my***",
+		"PG_PASSWORD=":                              "PG_PASSWORD=***",
+		"AWS_SECRET_ACCESS_KEY=abc=def":             "AWS_SECRET_ACCESS_KEY=ab***",
+		"DSN=postgres://alice:mypassword@db/app":    "DSN=postgres://alice:my***@db/app",
+		"NEBULA_CRAWL_TRON_TRONSCAN_API_KEY=abcdef": "NEBULA_CRAWL_TRON_TRONSCAN_API_KEY=ab***",
+		"NEBULA_CRAWL_WORKERS=1000":                 "NEBULA_CRAWL_WORKERS=1000",
+		"KEYSPACE=nebula":                           "KEYSPACE=nebula",
 		"NEBULA_CRAWL_TRON_TRONSCAN_URL=https://apilist.tronscanapi.com": "NEBULA_CRAWL_TRON_TRONSCAN_URL=https://apilist.tronscanapi.com",
 	}
 	for in, want := range cases {
@@ -93,17 +88,12 @@ func TestRedactEnvVar(t *testing.T) {
 
 func TestIsSecretKey(t *testing.T) {
 	cases := map[string]bool{
-		"NEBULA_CRAWL_TRON_TRONSCAN_API_KEY":    true,
-		"TronScanAPIKey":                        true,
-		"NEBULA_CRAWL_FILECOIN_GCP_CREDENTIALS": true,
-		"GCPCredentialsJSON":                    true,
-		"GITHUB_TOKEN":                          true,
-		"NEBULA_IDENTITY_PRIVATE_KEY":           true,
-		"PrivateKey":                            true,
-		"NEBULA_CRAWL_WORKERS":                  false,
-		"KEYSPACE":                              false,
-		"NEBULA_CRAWL_TRON_TRONSCAN_URL":        false,
-		"TronScanURL":                           false,
+		"NEBULA_CRAWL_TRON_TRONSCAN_API_KEY": true,
+		"TronScanAPIKey":                     true,
+		"NEBULA_CRAWL_WORKERS":               false,
+		"KEYSPACE":                           false,
+		"NEBULA_CRAWL_TRON_TRONSCAN_URL":     false,
+		"TronScanURL":                        false,
 	}
 	for in, want := range cases {
 		require.Equal(t, want, isSecretKey(in), "isSecretKey(%q)", in)
