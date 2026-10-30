@@ -281,6 +281,18 @@ var configs = map[Project]map[Network]*BootstrapConfig{
 			ProtocolIDs:   []string{"bep5"},
 		},
 	},
+	ProjectTron: {
+		NetworkMainnet: {
+			// The entries use the "ip:port" form. The protocol ID is the
+			// p2p network ID (node.p2p.version) in decimal.
+			Bootstrappers: BootstrapPeersTronMainnet,
+			ProtocolIDs:   []string{"11111"},
+		},
+		NetworkNile: {
+			Bootstrappers: BootstrapPeersTronNile,
+			ProtocolIDs:   []string{"201910292"},
+		},
+	},
 	ProjectTor: {
 		NetworkMainnet: {
 			// The bootstrappers are the DirPorts of the directory

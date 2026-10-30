@@ -635,4 +635,52 @@ var (
 		"204.13.164.118:80", // bastet
 		"216.218.219.41:80", // faravahar
 	}
+
+	// BootstrapPeersTronMainnet are the seed nodes of TRON mainnet in
+	// "ip:port" form. The port serves both UDP discovery and the TCP
+	// channel. Extracted from seed.node.ip.list in:
+	//  https://github.com/tronprotocol/java-tron/blob/GreatVoyage-v4.8.2.3/framework/src/main/resources/config.conf
+	BootstrapPeersTronMainnet = []string{
+		"3.225.171.164:18888",
+		"52.8.46.215:18888",
+		"3.79.71.167:18888",
+		"108.128.110.16:18888",
+		"18.133.82.227:18888",
+		"35.180.81.133:18888",
+		"13.210.151.5:18888",
+		"18.231.27.82:18888",
+		"3.12.212.122:18888",
+		"52.24.128.7:18888",
+		"15.207.144.3:18888",
+		"3.39.38.55:18888",
+		"54.151.226.240:18888",
+		"35.174.93.198:18888",
+		"18.210.241.149:18888",
+		"54.177.115.127:18888",
+		"54.254.131.82:18888",
+		"18.167.171.167:18888",
+		"54.167.11.177:18888",
+		"35.74.7.196:18888",
+		"52.196.244.176:18888",
+		"54.248.129.19:18888",
+		"43.198.142.160:18888",
+		"3.0.214.7:18888",
+		"54.153.59.116:18888",
+		"54.153.94.160:18888",
+		"54.82.161.39:18888",
+		"54.179.207.68:18888",
+		"18.142.82.44:18888",
+		"18.163.230.203:18888",
+	}
+
+	// BootstrapPeersTronNile are the seed nodes of the TRON Nile testnet in
+	// "ip:port" form. Extracted from seed.node.ip.list in:
+	//  https://github.com/tron-nile-testnet/nile-testnet/blob/ebe5051207d7c97e8fcdc38ad6279860fba0e697/framework/src/main/resources/config-nile.conf
+	BootstrapPeersTronNile = []string{
+		"44.236.192.97:18888",
+		"44.236.125.107:18888",
+		"44.232.119.174:18888",
+		"52.39.105.180:18888",
+		"54.70.52.47:18888",
+	}
 )

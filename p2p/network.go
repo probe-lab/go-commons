@@ -24,4 +24,5 @@ const (
 	NetworkStatus      Network = "status"
 	NetworkTWN         Network = "twn"
 	NetworkLightning   Network = "lightning"
+	NetworkNile        Network = "nile"
 )
