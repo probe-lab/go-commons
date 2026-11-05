@@ -1,6 +1,6 @@
-# CLAUDE.md
+# go-commons
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+ProbeLab repository. Follow the `probelab` skill: it holds the company rules. Load it before you start any task here.
 
 ## Common Commands
 
