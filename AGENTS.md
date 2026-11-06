@@ -18,8 +18,7 @@ Shared Go library (`github.com/probe-lab/go-commons`) for ProbeLab tools: CLI se
 
 ## Commands
 
-- `just build`, `just test`, `just lint` (needs golangci-lint), `just format` (needs gofumpt), `just ci` (the checks CI runs)
-- `just check` runs `go vet ./...`
+- `just build`, `just test`, `just lint` (gofumpt, `go fix`, `go vet`, staticcheck), `just format` (gofumpt and `go fix`), `just ci` (the checks CI runs)
 - Integration tests skip unless `GO_COMMONS_TEST_POSTGRES_DSN`, or `GO_COMMONS_TEST_CLICKHOUSE_ADDR` with `_USER`, `_PASSWORD` and `_DATABASE`, is set. See `.env.example`.
 
 ## Conventions

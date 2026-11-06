@@ -4,7 +4,7 @@
 default:
     @just --list
 
-# Build every package
+# Build every package and command
 build:
     go build ./...
 
@@ -12,17 +12,17 @@ build:
 test *args:
     go test ./... {{ args }}
 
-# Check lint without changing files
+# Check formatting, go fix, vet, and staticcheck without changing files
 lint:
-    golangci-lint run
+    @test -z "$(gofumpt -l .)" || { echo "not formatted, run just format:"; gofumpt -l .; exit 1; }
+    go fix -diff ./...
+    go vet ./...
+    staticcheck ./...
 
-# Format the code in place
+# Format the code and apply go fix in place
 format:
     gofumpt -w .
-
-# Check for compile errors and suspicious constructs
-check:
-    go vet ./...
+    go fix ./...
 
 # Run everything CI runs
 ci: lint build test
