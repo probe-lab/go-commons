@@ -1,0 +1,38 @@
+# CI for the library: lints and tests every pull request and every merge.
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+# A new push to a pull request cancels its running checks.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Checking Go code
+    if: github.event.pull_request.draft != true
+    uses: probe-lab/.github/.github/workflows/go.yml@v1
+    with:
+      # Empty in a public repo, which then uses GitHub-hosted runners.
+      runner: ${{ vars.RUNNER_LABEL }}
+      # `just lint` runs gofumpt and staticcheck.
+      go-tools: mvdan.cc/gofumpt@v0.12.0 honnef.co/go/tools/cmd/staticcheck@2026.2.2
+
+  # The one required check. It passes when every job passed or was skipped.
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [go]
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    steps:
+      - name: Checking that every job passed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

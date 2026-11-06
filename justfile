@@ -1,17 +1,28 @@
-# Development commands for ProbeLab go-commons
+# Task runner. `just` lists the recipes; CI runs `just ci`.
 
-# Run all tests
-test:
-    go test ./...
+# List the recipes
+default:
+    @just --list
 
-# Build all packages
+# Build every package and command
 build:
     go build ./...
 
-# Check for compile errors without building
-check:
-    go vet ./...
+# Run the tests
+test *args:
+    go test ./... {{ args }}
 
-# Run static analysis
+# Check formatting, go fix, vet, and staticcheck without changing files
 lint:
-    golangci-lint run
+    @test -z "$(gofumpt -l .)" || { echo "not formatted, run just format:"; gofumpt -l .; exit 1; }
+    @test -z "$(go fix -diff ./... 2>/dev/null)" || { go fix -diff ./... 2>/dev/null; echo "go fix changes pending, run just format"; exit 1; }
+    go vet ./...
+    staticcheck ./...
+
+# Format the code and apply go fix in place
+format:
+    gofumpt -w .
+    go fix ./...
+
+# Run everything CI runs
+ci: lint build test

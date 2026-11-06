@@ -412,7 +412,7 @@ func TestBatchInserter_rowType(t *testing.T) {
 	require.NoError(t, b.Stop(context.Background()))
 
 	require.Len(t, batch.appended, 1)
-	assert.Equal(t, reflect.TypeOf(&testRow{}), reflect.TypeOf(batch.appended[0]))
+	assert.Equal(t, reflect.TypeFor[*testRow](), reflect.TypeOf(batch.appended[0]))
 }
 
 func TestBatchInserterGroup(t *testing.T) {
