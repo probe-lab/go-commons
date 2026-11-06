@@ -210,8 +210,7 @@ func IsNotFound(err error) bool {
 
 // AsStatus returns the status code and content type if err is a StatusError.
 func AsStatus(err error) (int, string, bool) {
-	var se *StatusError
-	if errors.As(err, &se) {
+	if se, ok := errors.AsType[*StatusError](err); ok {
 		return se.StatusCode, se.ContentType, true
 	}
 	return 0, "", false
@@ -272,8 +271,7 @@ func (c *Client) Do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 // retryable reports whether err is a network error or a 5xx response, the
 // failures that a later attempt may not repeat.
 func retryable(err error) bool {
-	var se *StatusError
-	if errors.As(err, &se) {
+	if se, ok := errors.AsType[*StatusError](err); ok {
 		return se.StatusCode >= 500
 	}
 
