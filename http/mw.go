@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -88,8 +89,8 @@ func WrapResponseWriter(rw http.ResponseWriter) (*ResponseWriter, error) {
 
 func MiddlewareChain(mws ...Middleware) Middleware {
 	return func(next http.Handler) http.Handler {
-		for i := len(mws) - 1; i >= 0; i-- {
-			next = mws[i](next)
+		for _, mw := range slices.Backward(mws) {
+			next = mw(next)
 		}
 		return next
 	}
@@ -97,8 +98,8 @@ func MiddlewareChain(mws ...Middleware) Middleware {
 
 func MiddlewareChainFunc(mws ...Middleware) MiddlewareFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
-		for i := len(mws) - 1; i >= 0; i-- {
-			next = mws[i](next).ServeHTTP
+		for _, mw := range slices.Backward(mws) {
+			next = mw(next).ServeHTTP
 		}
 		return next
 	}
