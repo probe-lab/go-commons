@@ -448,11 +448,9 @@ func (g *BatchInserterGroup) Flush(ctx context.Context) error {
 	errs := make([]error, len(g.inserters))
 	var wg sync.WaitGroup
 	for idx, i := range g.inserters {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			errs[idx] = i.Flush(ctx)
-		}()
+		})
 	}
 	wg.Wait()
 	return errors.Join(errs...)
@@ -464,11 +462,9 @@ func (g *BatchInserterGroup) Stop(ctx context.Context) error {
 	errs := make([]error, len(g.inserters))
 	var wg sync.WaitGroup
 	for idx, i := range g.inserters {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			errs[idx] = i.Stop(ctx)
-		}()
+		})
 	}
 	wg.Wait()
 	return errors.Join(errs...)
