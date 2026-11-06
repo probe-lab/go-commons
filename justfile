@@ -1,5 +1,9 @@
 # Task runner. `just` lists the recipes; CI runs `just ci`.
 
+# The lint tools, pinned here so a person and CI run the same versions.
+gofumpt := "go run mvdan.cc/gofumpt@v0.12.0"
+staticcheck := "go run honnef.co/go/tools/cmd/staticcheck@2026.2.2"
+
 # List the recipes
 default:
     @just --list
@@ -14,14 +18,14 @@ test *args:
 
 # Check formatting, go fix, vet, and staticcheck without changing files
 lint:
-    @test -z "$(gofumpt -l .)" || { echo "not formatted, run just format:"; gofumpt -l .; exit 1; }
+    @test -z "$({{ gofumpt }} -l .)" || { echo "not formatted, run just format:"; {{ gofumpt }} -l .; exit 1; }
     @test -z "$(go fix -diff ./... 2>/dev/null)" || { go fix -diff ./... 2>/dev/null; echo "go fix changes pending, run just format"; exit 1; }
     go vet ./...
-    staticcheck ./...
+    {{ staticcheck }} ./...
 
 # Format the code and apply go fix in place
 format:
-    gofumpt -w .
+    {{ gofumpt }} -w .
     go fix ./...
 
 # Run everything CI runs
