@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"slices"
 	"strconv"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -189,10 +190,8 @@ func (cfg *ClickHouseMultiConfig) Validate() error {
 		return fmt.Errorf("at least one database must be specified")
 	}
 
-	for _, db := range cfg.Databases {
-		if db == "" {
-			return fmt.Errorf("database name must not be empty")
-		}
+	if slices.Contains(cfg.Databases, "") {
+		return fmt.Errorf("database name must not be empty")
 	}
 
 	return cfg.BaseConfig.Validate()

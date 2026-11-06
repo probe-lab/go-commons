@@ -251,7 +251,7 @@ func MiddlewareContentType(next http.Handler) http.Handler {
 // MiddlewareGZip applies gzip compression to HTTP responses if the client supports it.
 func MiddlewareGZip(next http.Handler) http.Handler {
 	gzPool := sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			// For web content, level 4 seems to be a sweet spot.
 			// https://github.com/gin-contrib/gzip/blob/3b246bb1ab0a98b1e3685d98711669008e26d84a/handler.go#L42
 			gz, err := gzip.NewWriterLevel(io.Discard, 4)

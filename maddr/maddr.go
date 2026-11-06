@@ -125,7 +125,7 @@ func ExtractIPFromString(s string) net.IP {
 // display purposes. Components after "/certhash/" are truncated to maxLen.
 func EllipsizeCerthash(input string, maxLen int) string {
 	parts := strings.Split(input, "/")
-	for i := 0; i < len(parts); i++ {
+	for i := range parts {
 		if parts[i] == "certhash" && i+1 < len(parts) {
 			parts[i+1] = ellipsize(parts[i+1], maxLen)
 		}
@@ -137,9 +137,6 @@ func ellipsize(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
-	half := (maxLen - 2) / 2
-	if half < 1 {
-		half = 1
-	}
+	half := max((maxLen-2)/2, 1)
 	return s[:half] + ".." + s[len(s)-half:]
 }
