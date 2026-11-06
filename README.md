@@ -62,8 +62,8 @@ The library creates these instruments when a tool uses the matching component. N
 |---|---|
 | `just build` | Builds every package |
 | `just test` | Runs the tests; extra arguments go to `go test` |
-| `just lint` | Runs golangci-lint |
-| `just format` | Formats with gofumpt |
+| `just lint` | Checks gofumpt formatting, `go fix`, `go vet` and staticcheck |
+| `just format` | Formats with gofumpt and applies `go fix` |
 | `just ci` | Runs `lint`, `build` and `test` |
 
 Integration tests for Postgres and ClickHouse skip unless the variables in `.env.example` are set.
