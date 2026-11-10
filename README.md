@@ -71,3 +71,7 @@ Integration tests for Postgres and ClickHouse skip unless the variables in `.env
 ## Deployment
 
 Nothing is deployed. This is a library: a tool picks up a change when it updates its `go-commons` version.
+
+## License
+
+[PolyForm Strict License 1.0.0](LICENSE).
