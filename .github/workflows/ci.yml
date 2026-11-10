@@ -1,0 +1,45 @@
+# CI for a Go library or tool that has no image: checks every pull request and
+# every merge.
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+# A new push to a pull request cancels its running checks.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, Build & Test
+    if: github.event.pull_request.draft != true
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - name: Checking out the Code
+        uses: actions/checkout@v7
+
+      - name: Setting up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: ${{ runner.environment == 'github-hosted' }}
+
+      - name: Setting up just
+        uses: extractions/setup-just@v4
+
+      - name: Linting the Code
+        run: just lint
+
+      - name: Building the Code
+        run: just build
+
+      - name: Running the Tests
+        run: just test
