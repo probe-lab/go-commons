@@ -17,6 +17,7 @@ Import the packages you need, for example `github.com/probe-lab/go-commons/cli` 
 |---|---|
 | `cli` | Root command with logging, telemetry, banner and graceful shutdown; Postgres, ClickHouse and health flags |
 | `db` | Postgres and ClickHouse connections, migrations, batch inserts |
+| `file` | Atomic file writes: a reader never sees a partial file |
 | `http` | HTTP client, server, middleware, JSON responses |
 | `grpc` | gRPC server with health checks, panic recovery and rate limiting |
 | `log` | Structured logging on slog |
