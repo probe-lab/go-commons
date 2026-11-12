@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -184,4 +185,102 @@ func TestClientRetriesTransientFailures(t *testing.T) {
 	_, err = c.Do(context.Background(), ClientRequest{URL: srv.URL})
 	require.Error(t, err)
 	require.Equal(t, 1, calls)
+}
+
+func TestRetryAfter(t *testing.T) {
+	now := time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name   string
+		header string
+		want   time.Duration
+		ok     bool
+	}{
+		{name: "seconds", header: "120", want: 120 * time.Second, ok: true},
+		{name: "zero", header: "0", want: 0, ok: true},
+		{name: "date", header: now.Add(90 * time.Second).Format(http.TimeFormat), want: 90 * time.Second, ok: true},
+		{name: "past date", header: now.Add(-time.Minute).Format(http.TimeFormat), want: 0, ok: true},
+		{name: "missing", header: "", want: 0, ok: false},
+		{name: "negative", header: "-5", want: 0, ok: false},
+		{name: "invalid", header: "soon", want: 0, ok: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := http.Header{}
+			if tt.header != "" {
+				h.Set("Retry-After", tt.header)
+			}
+
+			got, ok := RetryAfter(h, now)
+			require.Equal(t, tt.ok, ok)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestRetryDelay(t *testing.T) {
+	withRetryAfter := func(v string) *ClientResponse {
+		return &ClientResponse{Header: http.Header{"Retry-After": {v}}}
+	}
+
+	tests := []struct {
+		name    string
+		res     *ClientResponse
+		attempt int
+		want    time.Duration
+		ok      bool
+	}{
+		{name: "no response", res: nil, attempt: 0, want: time.Second, ok: true},
+		{name: "backoff grows", res: nil, attempt: 2, want: 4 * time.Second, ok: true},
+		{name: "backoff is capped", res: nil, attempt: 10, want: 30 * time.Second, ok: true},
+		{name: "longer Retry-After wins", res: withRetryAfter("20"), attempt: 0, want: 20 * time.Second, ok: true},
+		{name: "longer backoff wins", res: withRetryAfter("1"), attempt: 3, want: 8 * time.Second, ok: true},
+		{name: "Retry-After over the cap ends the retries", res: withRetryAfter("3600"), attempt: 0, want: 0, ok: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := retryDelay(tt.res, tt.attempt, time.Now())
+			require.Equal(t, tt.ok, ok)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClientRetriesTooManyRequests(t *testing.T) {
+	retryBase = time.Millisecond
+	t.Cleanup(func() { retryBase = time.Second })
+
+	newServer := func(retryAfter string, calls *atomic.Int32) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			if calls.Add(1) < 3 {
+				w.Header().Set("Retry-After", retryAfter)
+				w.WriteHeader(http.StatusTooManyRequests)
+				return
+			}
+			_, _ = w.Write([]byte("ok"))
+		}))
+	}
+
+	c := newClient(t, DefaultClientConfig())
+
+	var calls atomic.Int32
+	srv := newServer("0", &calls)
+	defer srv.Close()
+
+	_, err := c.Do(context.Background(), ClientRequest{URL: srv.URL, Retries: 3})
+	require.NoError(t, err)
+	require.Equal(t, int32(3), calls.Load())
+
+	// A Retry-After over retryAfterMax returns the 429 without a retry.
+	var longCalls atomic.Int32
+	long := newServer("3600", &longCalls)
+	defer long.Close()
+
+	_, err = c.Do(context.Background(), ClientRequest{URL: long.URL, Retries: 3})
+	code, _, ok := AsStatus(err)
+	require.True(t, ok)
+	require.Equal(t, http.StatusTooManyRequests, code)
+	require.Equal(t, int32(1), longCalls.Load())
 }
