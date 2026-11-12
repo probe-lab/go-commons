@@ -8,7 +8,7 @@ Shared Go library (`github.com/probe-lab/go-commons`) for ProbeLab tools: CLI se
 
 - `cli/` — root command on urfave/cli/v3 with telemetry, logging, banner and graceful shutdown; Postgres, ClickHouse and health flags
 - `db/` — Postgres and ClickHouse connections with OpenTelemetry, migrations (golang-migrate, files from `Dir`, default `migrations`), generic `BatchInserter`
-- `file/` — atomic file writes (`WriteAtomic`, `CreateAtomic` with `Commit` and `Abort`)
+- `file/` — atomic file writes (`WriteAtomic`)
 - `http/` — client (one user agent, timeout, body and redirect caps, optional rate limit, retries that honor Retry-After, resumable downloads), server with graceful shutdown, JSON responses, middleware
 - `log/` — slog setup; `--log.format` is `console` (default), `text` or `json`
 - `tele/` — metrics (`prometheus` default, or `otlp` push), traces (OTLP gRPC), OpenTelemetry resource
