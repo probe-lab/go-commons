@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"mime"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -154,17 +156,21 @@ type ClientRequest struct {
 	Accept string
 	// Header holds extra headers added to the request.
 	Header http.Header
-	// Retries is how many more attempts Do makes after a network error or
-	// a 5xx response, waiting retryBase, then twice that, and so on,
-	// between them. Zero makes a single attempt.
+	// Retries is how many more attempts Do makes after a network error, a
+	// 5xx response or a 429 response, waiting retryBase, then twice that,
+	// and so on, between them. A Retry-After header that asks for a longer
+	// wait extends it; one that asks for more than retryAfterMax ends the
+	// retries. Zero makes a single attempt.
 	Retries int
 }
 
 // retryBase is the wait before the first retry; each further retry waits
-// twice as long, up to retryMax.
+// twice as long, up to retryMax. retryAfterMax is the longest Retry-After
+// that Do waits for.
 var (
-	retryBase = time.Second
-	retryMax  = 30 * time.Second
+	retryBase     = time.Second
+	retryMax      = 30 * time.Second
+	retryAfterMax = 2 * time.Minute
 )
 
 // jsonAccept is the Accept header GetJSON and DoJSON send.
@@ -249,7 +255,8 @@ func (c *Client) DoJSON(ctx context.Context, r ClientRequest, v any) (*ClientRes
 // Do sends the request and returns the body, capped at the configured size.
 // Non-2xx responses return a *StatusError together with the ClientResponse,
 // so callers can read the status and headers. With Retries set, a network
-// error or a 5xx response is tried again after a growing wait.
+// error, a 5xx response or a 429 response is tried again after a growing
+// wait, or after the wait that the Retry-After header asks for.
 func (c *Client) Do(ctx context.Context, r ClientRequest) (*ClientResponse, error) {
 	for attempt := 0; ; attempt++ {
 		res, err := c.do(ctx, r)
@@ -257,7 +264,10 @@ func (c *Client) Do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 			return res, err
 		}
 
-		delay := min(retryBase<<attempt, retryMax)
+		delay, ok := retryDelay(res, attempt, time.Now())
+		if !ok {
+			return res, err
+		}
 		slog.Debug("Retrying", "url", r.URL, "attempt", attempt+1, "delay", delay, "err", err)
 
 		select {
@@ -268,16 +278,62 @@ func (c *Client) Do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 	}
 }
 
-// retryable reports whether err is a network error or a 5xx response, the
-// failures that a later attempt may not repeat.
+// retryable reports whether err is a network error, a 5xx response or a 429
+// response, the failures that a later attempt may not repeat.
 func retryable(err error) bool {
 	if se, ok := errors.AsType[*StatusError](err); ok {
-		return se.StatusCode >= 500
+		return se.StatusCode >= 500 || se.StatusCode == http.StatusTooManyRequests
 	}
 
 	var ue *url.Error
 	var ne net.Error
 	return errors.As(err, &ue) || errors.As(err, &ne)
+}
+
+// retryDelay returns the wait before the next attempt: retryBase doubled per
+// attempt up to retryMax, or the Retry-After of the response when that is
+// longer. It reports false when Retry-After asks for more than retryAfterMax,
+// so that Do returns the error instead of asking again before the server
+// allows it.
+func retryDelay(res *ClientResponse, attempt int, now time.Time) (time.Duration, bool) {
+	delay := min(retryBase<<attempt, retryMax)
+	if res == nil {
+		return delay, true
+	}
+
+	after, ok := RetryAfter(res.Header, now)
+	if !ok {
+		return delay, true
+	}
+	if after > retryAfterMax {
+		return 0, false
+	}
+
+	return max(delay, after), true
+}
+
+// RetryAfter returns the wait that the Retry-After header asks for, given in
+// seconds or as an HTTP date (RFC 9110, section 10.2.3). A date in the past
+// gives zero. It reports false when the header is missing or invalid.
+func RetryAfter(h http.Header, now time.Time) (time.Duration, bool) {
+	v := strings.TrimSpace(h.Get("Retry-After"))
+	if v == "" {
+		return 0, false
+	}
+
+	if secs, err := strconv.ParseInt(v, 10, 64); err == nil {
+		if secs < 0 {
+			return 0, false
+		}
+		return time.Duration(min(secs, int64(math.MaxInt64/time.Second))) * time.Second, true
+	}
+
+	t, err := http.ParseTime(v)
+	if err != nil {
+		return 0, false
+	}
+
+	return max(t.Sub(now), 0), true
 }
 
 func (c *Client) do(ctx context.Context, r ClientRequest) (*ClientResponse, error) {
