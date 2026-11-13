@@ -28,19 +28,22 @@ type DownloadConfig struct {
 	ProgressInterval time.Duration
 }
 
+// DefaultDownloadConfig returns a configuration that logs progress every 10
+// seconds.
 func DefaultDownloadConfig() *DownloadConfig {
 	return &DownloadConfig{
 		ProgressInterval: 10 * time.Second,
 	}
 }
 
+// Validate reports the first invalid value of the configuration.
 func (cfg *DownloadConfig) Validate() error {
 	if cfg == nil {
-		return fmt.Errorf("config is nil")
+		return errors.New("config is nil")
 	}
 
 	if cfg.ProgressInterval <= 0 {
-		return fmt.Errorf("progress interval must be positive")
+		return errors.New("progress interval must be positive")
 	}
 
 	return nil
@@ -95,7 +98,7 @@ func (c *Client) Download(ctx context.Context, url, path string, cfg *DownloadCo
 	if err != nil {
 		return err
 	}
-	defer log.Defer(res.Body.Close, "failed to close response body")
+	defer log.Defer(res.Body.Close, "Failed to close response body")
 
 	switch res.StatusCode {
 	case http.StatusPartialContent:
@@ -103,7 +106,7 @@ func (c *Client) Download(ctx context.Context, url, path string, cfg *DownloadCo
 		if !ok || start != offset {
 			return fmt.Errorf("GET %s: server resumed at %q, wanted byte %d", url, res.Header.Get("Content-Range"), offset)
 		}
-		logger.Info("Resuming download", "url", url, "offset", offset)
+		logger.Info("Resuming download", "url", redactURL(url), "offset", offset)
 
 	case http.StatusOK:
 		offset = 0
@@ -113,6 +116,7 @@ func (c *Client) Download(ctx context.Context, url, path string, cfg *DownloadCo
 		if _, total, ok := parseContentRange(res.Header.Get("Content-Range")); ok && total == offset {
 			return finishDownload(part, etagPath, path)
 		}
+
 		if err := errors.Join(os.Remove(part), os.Remove(etagPath)); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
@@ -155,6 +159,7 @@ func (c *Client) Download(ctx context.Context, url, path string, cfg *DownloadCo
 	if cerr := fh.Close(); err == nil {
 		err = cerr
 	}
+
 	if err != nil {
 		return fmt.Errorf("download %s: %w (kept %s to resume)", url, err, part)
 	}
@@ -178,12 +183,14 @@ func (c *Client) downloadRequest(ctx context.Context, url string, offset int64, 
 
 	req.Header.Set("User-Agent", c.userAgent)
 	req.Header.Set("Accept-Encoding", "identity")
+
 	if offset > 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 		if etag, err := os.ReadFile(etagPath); err == nil && strings.TrimSpace(string(etag)) != "" {
 			req.Header.Set("If-Range", strings.TrimSpace(string(etag)))
 		}
 	}
+
 	for k, vs := range header {
 		req.Header[http.CanonicalHeaderKey(k)] = vs
 	}
@@ -203,6 +210,7 @@ func finishDownload(part, etagPath, path string) error {
 	if cerr := fh.Close(); err == nil {
 		err = cerr
 	}
+
 	if err != nil {
 		return fmt.Errorf("sync %s: %w", part, err)
 	}
@@ -283,7 +291,7 @@ func (p *progressReader) Read(b []byte) (int, error) {
 	if now := time.Now(); now.Sub(p.last) >= p.interval {
 		p.last = now
 
-		attrs := []any{"url", p.url, "bytes", p.done}
+		attrs := []any{"url", redactURL(p.url), "bytes", p.done}
 		if p.total > 0 {
 			attrs = append(attrs, "total", p.total, "percent", p.done*100/p.total)
 		}

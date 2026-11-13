@@ -3,6 +3,7 @@ package http
 import (
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -26,12 +27,15 @@ const (
 	ApiKeyHeader    = "X-API-Key"
 )
 
+// Middleware wraps a handler; MiddlewareFunc does the same for a handler function.
 type (
 	Middleware      func(http.Handler) http.Handler
 	MiddlewareFunc  func(http.HandlerFunc) http.HandlerFunc
-	requestIdCtxKey struct{}
+	requestIDCtxKey struct{}
 )
 
+// ResponseWriter records the status and the size of a response, and the user
+// that MiddlewareAuthentication found.
 type ResponseWriter struct {
 	writer  http.ResponseWriter
 	flusher http.Flusher
@@ -39,11 +43,6 @@ type ResponseWriter struct {
 	written int
 	user    string
 }
-
-var (
-	_ http.ResponseWriter = (*ResponseWriter)(nil)
-	_ http.Flusher        = (*ResponseWriter)(nil)
-)
 
 func (w *ResponseWriter) Header() http.Header {
 	return w.writer.Header()
@@ -68,6 +67,7 @@ func (w *ResponseWriter) GroupedStatus() int {
 	return w.status / 100 * 100
 }
 
+// WrapResponseWriter returns rw as a *ResponseWriter. It fails when rw cannot flush.
 func WrapResponseWriter(rw http.ResponseWriter) (*ResponseWriter, error) {
 	wrapped, ok := rw.(*ResponseWriter)
 	if ok {
@@ -76,7 +76,7 @@ func WrapResponseWriter(rw http.ResponseWriter) (*ResponseWriter, error) {
 
 	flusher, ok := rw.(http.Flusher)
 	if !ok {
-		return nil, fmt.Errorf("ResponseWriter does not implement http.Flusher")
+		return nil, errors.New("ResponseWriter does not implement http.Flusher")
 	}
 
 	return &ResponseWriter{
@@ -87,6 +87,7 @@ func WrapResponseWriter(rw http.ResponseWriter) (*ResponseWriter, error) {
 	}, nil
 }
 
+// MiddlewareChain combines mws into one; the first runs outermost.
 func MiddlewareChain(mws ...Middleware) Middleware {
 	return func(next http.Handler) http.Handler {
 		for _, mw := range slices.Backward(mws) {
@@ -96,6 +97,7 @@ func MiddlewareChain(mws ...Middleware) Middleware {
 	}
 }
 
+// MiddlewareChainFunc is MiddlewareChain for a handler function.
 func MiddlewareChainFunc(mws ...Middleware) MiddlewareFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		for _, mw := range slices.Backward(mws) {
@@ -105,32 +107,44 @@ func MiddlewareChainFunc(mws ...Middleware) MiddlewareFunc {
 	}
 }
 
+// MiddlewareRecover logs a panic of the handler and answers with a 500.
 func MiddlewareRecover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		defer func() {
-			if rec := recover(); rec != nil {
-				slog.Error("Recovered panic", "recover", rec, "stack", string(debug.Stack()))
+			rec := recover()
+			if rec == nil {
+				return
 			}
+			// The server uses this value to abort a response on purpose.
+			if rec == http.ErrAbortHandler {
+				panic(rec)
+			}
+
+			slog.Error("Recovered panic", "recover", rec, "stack", string(debug.Stack()))
+			EncodeErr(rw, http.StatusInternalServerError, "internal server error")
 		}()
 
 		next.ServeHTTP(rw, r)
 	})
 }
 
+// MiddlewareRequestID puts the request id, from the X-Request-Id header or a new
+// UUID, into the context of the request.
 func MiddlewareRequestID(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		requestID := r.Header.Get(RequestIDHeader)
 		if requestID != "" {
-			ctx = context.WithValue(ctx, requestIdCtxKey{}, requestID)
+			ctx = context.WithValue(ctx, requestIDCtxKey{}, requestID)
 		} else if id, err := uuid.NewRandom(); err == nil {
-			ctx = context.WithValue(ctx, requestIdCtxKey{}, id.String())
+			ctx = context.WithValue(ctx, requestIDCtxKey{}, id.String())
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 	return http.HandlerFunc(fn)
 }
 
+// MiddlewareLogging logs one line per request, at a level that follows the status.
 func MiddlewareLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		start := time.Now()
@@ -146,7 +160,7 @@ func MiddlewareLogging(next http.Handler) http.Handler {
 		logger := slog.Default()
 
 		ctx := req.Context()
-		if reqID, ok := ctx.Value(requestIdCtxKey{}).(string); ok {
+		if reqID, ok := ctx.Value(requestIDCtxKey{}).(string); ok {
 			logger = logger.With("request_id", reqID)
 		}
 
@@ -158,7 +172,6 @@ func MiddlewareLogging(next http.Handler) http.Handler {
 			logLevel = slog.LevelError
 		default:
 			logLevel = slog.LevelInfo
-
 		}
 
 		logger.Log(ctx, logLevel, "Served",
@@ -172,15 +185,22 @@ func MiddlewareLogging(next http.Handler) http.Handler {
 	})
 }
 
+// MiddlewareMetric counts requests by status class and tracks those in flight.
 func MiddlewareMetric(provider metric.MeterProvider) Middleware {
 	meter := provider.Meter(meterName)
 
-	requestCount, err := meter.Int64Counter("requests")
+	requestCount, err := meter.Int64Counter("requests",
+		metric.WithUnit("{request}"),
+		metric.WithDescription("HTTP requests served, by status class"),
+	)
 	if err != nil {
 		panic(fmt.Errorf("init requests int64 counter: %w", err))
 	}
 
-	inflight, err := meter.Int64UpDownCounter("in_flight")
+	inflight, err := meter.Int64UpDownCounter("in_flight",
+		metric.WithUnit("{request}"),
+		metric.WithDescription("HTTP requests being served"),
+	)
 	if err != nil {
 		panic(fmt.Errorf("init in_flight int64 up down counter: %w", err))
 	}
@@ -205,7 +225,13 @@ func MiddlewareMetric(provider metric.MeterProvider) Middleware {
 	}
 }
 
+// MiddlewareAuthentication accepts requests whose X-API-Key header is in keys;
+// users[i] is the user of keys[i]. It panics when the lengths differ.
 func MiddlewareAuthentication(keys []string, users []string) func(next http.Handler) http.Handler {
+	if len(keys) != len(users) {
+		panic(fmt.Errorf("got %d API keys but %d users", len(keys), len(users)))
+	}
+
 	lookup := make(map[string]string, len(keys))
 	for i, key := range keys {
 		lookup[key] = users[i]
@@ -221,7 +247,7 @@ func MiddlewareAuthentication(keys []string, users []string) func(next http.Hand
 
 			user, found := lookup[key]
 			if !found {
-				EncodeErr(rw, http.StatusUnauthorized, fmt.Sprintf("unrecognized API key %q", key))
+				EncodeErr(rw, http.StatusUnauthorized, "unrecognized API key")
 				return
 			}
 
@@ -238,6 +264,7 @@ func MiddlewareAuthentication(keys []string, users []string) func(next http.Hand
 	}
 }
 
+// MiddlewareContentType sets the YAML content type for .yaml and .yml paths.
 func MiddlewareContentType(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		ext := filepath.Ext(r.URL.Path)

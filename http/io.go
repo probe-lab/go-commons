@@ -8,6 +8,8 @@ import (
 	"net/http"
 )
 
+// Encode writes v as a JSON Response with the given status. An error or an
+// *ErrResponse goes into the error field, any other value into the data field.
 func Encode[T any](rw http.ResponseWriter, status int, v T) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(status)
@@ -29,10 +31,11 @@ func Encode[T any](rw http.ResponseWriter, status int, v T) {
 	}
 
 	if err := json.NewEncoder(rw).Encode(resp); err != nil {
-		slog.Error("failed to encode response", "err", err, "value", v)
+		slog.Error("Failed to encode response", "err", err)
 	}
 }
 
+// EncodeErr writes errMsg as a JSON error Response with the given status.
 func EncodeErr(rw http.ResponseWriter, status int, errMsg string) {
 	errResp := &ErrResponse{
 		Message: errMsg,
@@ -40,20 +43,22 @@ func EncodeErr(rw http.ResponseWriter, status int, errMsg string) {
 	Encode(rw, status, errResp)
 }
 
-func Decode[T any](rw io.Reader) (T, error) {
+// Decode reads one JSON value of type T from r.
+func Decode[T any](r io.Reader) (T, error) {
 	var v T
-	if err := json.NewDecoder(rw).Decode(&v); err != nil {
+	if err := json.NewDecoder(r).Decode(&v); err != nil {
 		return v, fmt.Errorf("decode json: %w", err)
 	}
 	return v, nil
 }
 
-func DecodeAndClose[T any](rw io.ReadCloser) (T, error) {
-	data, err := Decode[T](rw)
+// DecodeAndClose decodes one JSON value of type T from r and closes r.
+func DecodeAndClose[T any](r io.ReadCloser) (T, error) {
+	data, err := Decode[T](r)
 	if err != nil {
 		return data, err
 	}
-	if err := rw.Close(); err != nil {
+	if err := r.Close(); err != nil {
 		return data, fmt.Errorf("close reader: %w", err)
 	}
 	return data, nil

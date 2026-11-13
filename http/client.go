@@ -28,6 +28,7 @@ const DefaultUserAgent = "go-commons (+https://github.com/probe-lab/go-commons)"
 // meterName is the instrumentation scope of the metrics in this package.
 const meterName = "github.com/probe-lab/go-commons/http"
 
+// ClientConfig configures NewClient.
 type ClientConfig struct {
 	// UserAgent is sent with every request.
 	UserAgent string
@@ -42,6 +43,8 @@ type ClientConfig struct {
 	RPS float64
 }
 
+// DefaultClientConfig returns a configuration with a 15 second timeout, a 4 MiB
+// body cap, 5 redirects and no rate limit.
 func DefaultClientConfig() *ClientConfig {
 	return &ClientConfig{
 		UserAgent:    DefaultUserAgent,
@@ -52,29 +55,30 @@ func DefaultClientConfig() *ClientConfig {
 	}
 }
 
+// Validate reports the first invalid value of the configuration.
 func (cfg *ClientConfig) Validate() error {
 	if cfg == nil {
-		return fmt.Errorf("config is nil")
+		return errors.New("config is nil")
 	}
 
 	if cfg.UserAgent == "" {
-		return fmt.Errorf("user agent must not be empty")
+		return errors.New("user agent must not be empty")
 	}
 
 	if cfg.Timeout <= 0 {
-		return fmt.Errorf("timeout must be positive")
+		return errors.New("timeout must be positive")
 	}
 
 	if cfg.MaxBody <= 0 {
-		return fmt.Errorf("max body must be positive")
+		return errors.New("max body must be positive")
 	}
 
 	if cfg.MaxRedirects < 0 {
-		return fmt.Errorf("max redirects must not be negative")
+		return errors.New("max redirects must not be negative")
 	}
 
 	if cfg.RPS < 0 {
-		return fmt.Errorf("rps must not be negative")
+		return errors.New("rps must not be negative")
 	}
 
 	return nil
@@ -108,6 +112,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	}
 
 	maxRedirects := cfg.MaxRedirects
+
 	var limiter *rate.Limiter
 	if cfg.RPS > 0 {
 		limiter = rate.NewLimiter(rate.Limit(cfg.RPS), int(cfg.RPS)+1)
@@ -242,13 +247,16 @@ func (c *Client) DoJSON(ctx context.Context, r ClientRequest, v any) (*ClientRes
 	if r.Accept == "" {
 		r.Accept = jsonAccept
 	}
+
 	res, err := c.Do(ctx, r)
 	if err != nil {
 		return res, err
 	}
+
 	if err := json.Unmarshal(res.Body, v); err != nil {
 		return res, fmt.Errorf("decode %s: %w", r.URL, err)
 	}
+
 	return res, nil
 }
 
@@ -268,7 +276,7 @@ func (c *Client) Do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 		if !ok {
 			return res, err
 		}
-		slog.Debug("Retrying", "url", r.URL, "attempt", attempt+1, "delay", delay, "err", err)
+		slog.Debug("Retrying", "url", redactURL(r.URL), "attempt", attempt+1, "delay", delay, "err", err)
 
 		select {
 		case <-ctx.Done():
@@ -341,45 +349,55 @@ func (c *Client) do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 	if method == "" {
 		method = http.MethodGet
 	}
+
 	if err := c.Wait(ctx); err != nil {
 		return nil, err
 	}
+
 	var body io.Reader
 	if r.Body != nil {
 		body = bytes.NewReader(r.Body)
 	}
+
 	req, err := http.NewRequestWithContext(ctx, method, r.URL, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", c.userAgent)
+
 	if r.Accept != "" {
 		req.Header.Set("Accept", r.Accept)
 	}
+
 	if r.ContentType != "" {
 		req.Header.Set("Content-Type", r.ContentType)
 	}
+
 	for k, vs := range r.Header {
 		for _, v := range vs {
 			req.Header.Add(k, v)
 		}
 	}
+
 	start := time.Now()
 	res, err := c.hc.Do(req)
 	if err != nil {
 		logRequest(method, r.URL, start, 0, 0, err)
 		return nil, err
 	}
-	defer log.Defer(res.Body.Close, "failed to close response body")
+	defer log.Defer(res.Body.Close, "Failed to close response body")
 
 	data, err := io.ReadAll(io.LimitReader(res.Body, c.maxBody+1))
 	logRequest(method, r.URL, start, res.StatusCode, len(data), err)
+
 	if err != nil {
 		return nil, fmt.Errorf("read body of %s: %w", r.URL, err)
 	}
+
 	if int64(len(data)) > c.maxBody {
 		return nil, fmt.Errorf("body of %s exceeds %d bytes", r.URL, c.maxBody)
 	}
+
 	out := &ClientResponse{
 		URL:         res.Request.URL.String(),
 		StatusCode:  res.StatusCode,
@@ -388,9 +406,11 @@ func (c *Client) do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 		Body:        data,
 		TLS:         res.TLS != nil,
 	}
+
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		return out, &StatusError{URL: r.URL, StatusCode: res.StatusCode, ContentType: out.ContentType}
 	}
+
 	return out, nil
 }
 
@@ -398,7 +418,7 @@ func (c *Client) do(ctx context.Context, r ClientRequest) (*ClientResponse, erro
 // of the server middleware. Status and size are left out when the request
 // did not get a response.
 func logRequest(method, url string, start time.Time, status, size int, err error) {
-	logEntry := slog.With("method", method, "url", url, "time", time.Since(start))
+	logEntry := slog.With("method", method, "url", redactURL(url), "time", time.Since(start))
 	if status != 0 {
 		logEntry = logEntry.With("status", status, "size", size)
 	}
@@ -408,6 +428,21 @@ func logRequest(method, url string, start time.Time, status, size int, err error
 	}
 
 	logEntry.Debug("Requested")
+}
+
+// redactURL drops the query string and the user info of a URL, which can hold
+// tokens, so that logs stay free of secrets.
+func redactURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "invalid URL"
+	}
+
+	u.RawQuery = ""
+	u.Fragment = ""
+	u.User = nil
+
+	return u.String()
 }
 
 func mediaType(ct string) string {
