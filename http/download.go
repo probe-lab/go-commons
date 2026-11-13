@@ -32,6 +32,10 @@ type DownloadConfig struct {
 	// ProgressInterval is the minimum time between two calls of OnProgress.
 	// Zero calls OnProgress after each read from the body.
 	ProgressInterval time.Duration
+
+	// Overwrite downloads the body again when a file is at path. The file
+	// stays as it is until the new body is complete and replaces it.
+	Overwrite bool
 }
 
 // DefaultDownloadConfig logs the progress with slog.Default() every 10
@@ -109,8 +113,10 @@ func LogProgress(logger *slog.Logger) func(DownloadProgress) {
 // with a Range request; If-Range with the stored ETag makes the server send
 // the whole body again when the file changed in the meantime. Only a
 // complete body is synced to disk and renamed to path, so a file at path is
-// complete and Download returns at once, without a request. A failed
-// download keeps the part file for the next call.
+// complete and Download returns at once, without a request. With Overwrite,
+// Download sends the request also when a file is at path, and the rename
+// replaces that file. A failed download keeps the part file for the next
+// call and leaves a file at path as it was.
 //
 // Download waits for the rate limit, sends the user agent of the client and
 // follows redirects up to the cap. It asks for the identity encoding, so the
@@ -123,11 +129,13 @@ func (c *Client) Download(ctx context.Context, url, path string, cfg *DownloadCo
 		return fmt.Errorf("validate config: %w", err)
 	}
 
-	switch _, err := os.Stat(path); {
-	case err == nil:
-		return nil
-	case !errors.Is(err, fs.ErrNotExist):
-		return err
+	if !cfg.Overwrite {
+		switch _, err := os.Stat(path); {
+		case err == nil:
+			return nil
+		case !errors.Is(err, fs.ErrNotExist):
+			return err
+		}
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

@@ -73,6 +73,7 @@ func TestClientDownload(t *testing.T) {
 		part      string // content of the part file; empty means none
 		partETag  string // ETag stored with the part file
 		wantRange string // Range header of the request; empty means none
+		overwrite bool
 		requests  int
 		want      string
 	}{
@@ -81,6 +82,9 @@ func TestClientDownload(t *testing.T) {
 		{name: "resume", part: string(body[:400]), partETag: etag, wantRange: "bytes=400-", requests: 1, want: string(body)},
 		{name: "file changed on the server", part: "stale data", partETag: `"v1"`, wantRange: "bytes=10-", requests: 1, want: string(body)},
 		{name: "part holds the whole body", part: string(body), partETag: etag, wantRange: "bytes=1000-", requests: 1, want: string(body)},
+		{name: "overwrite without a file", overwrite: true, requests: 1, want: string(body)},
+		{name: "overwrite replaces a complete file", final: "old", overwrite: true, requests: 1, want: string(body)},
+		{name: "overwrite resumes a part file", final: "old", part: string(body[:400]), partETag: etag, wantRange: "bytes=400-", overwrite: true, requests: 1, want: string(body)},
 	}
 
 	for _, tt := range tests {
@@ -97,7 +101,10 @@ func TestClientDownload(t *testing.T) {
 				writeFile(t, path+".part.etag", tt.partETag)
 			}
 
-			if err := c.Download(context.Background(), srv.URL, path, DefaultDownloadConfig()); err != nil {
+			cfg := DefaultDownloadConfig()
+			cfg.Overwrite = tt.overwrite
+
+			if err := c.Download(context.Background(), srv.URL, path, cfg); err != nil {
 				t.Fatalf("Download: %v", err)
 			}
 
@@ -134,6 +141,40 @@ func TestClientDownload(t *testing.T) {
 				t.Errorf("Accept-Encoding = %q, want identity", got)
 			}
 		})
+	}
+}
+
+func TestClientDownloadOverwriteKeepsFileOnFailure(t *testing.T) {
+	// The server announces 1000 bytes and closes the connection after 400.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Length", "1000")
+		_, _ = w.Write(bytes.Repeat([]byte("x"), 400))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := newClient(t, DefaultClientConfig())
+
+	path := filepath.Join(t.TempDir(), "dir", "file.csv")
+	writeFile(t, path, "old")
+
+	cfg := DefaultDownloadConfig()
+	cfg.Overwrite = true
+
+	if err := c.Download(context.Background(), srv.URL, path, cfg); err == nil {
+		t.Fatal("Download succeeded, want an error")
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(got) != "old" {
+		t.Errorf("file = %q, want the old content", got)
+	}
+
+	if _, err := os.Stat(path + ".part"); err != nil {
+		t.Errorf("part file is not kept: %v", err)
 	}
 }
 
