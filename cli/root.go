@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -40,6 +41,11 @@ type RootCommandConfig struct {
 	EnvPrefix     string
 	AWSRegion     string
 	NoBanner      bool
+
+	// BannerCommands names the commands that print the banner. When it is
+	// empty, every command prints it. A command that is not named, and a
+	// run without a command, print no banner.
+	BannerCommands []string
 
 	metricsShutdown func(ctx context.Context) error
 	tracesShutdown  func(ctx context.Context) error
@@ -270,7 +276,7 @@ func (r *RootCommand) before(ctx context.Context, c *cli.Command) error {
 	// The banner goes to stderr like the logs, so stdout stays clean for
 	// output that other programs read. A completion request skips it, else
 	// it would show on every tab press.
-	if !r.cfg.NoBanner && !r.completing {
+	if r.showBanner(c) {
 		_, _ = fmt.Fprint(r.cmd.ErrWriter, banner(r.cmd.Name, time.Now().Year()))
 	}
 
@@ -295,6 +301,19 @@ func (r *RootCommand) before(ctx context.Context, c *cli.Command) error {
 	}
 
 	return nil
+}
+
+// showBanner reports whether the run prints the banner.
+func (r *RootCommand) showBanner(c *cli.Command) bool {
+	if r.cfg.NoBanner || r.completing {
+		return false
+	}
+
+	if len(r.cfg.BannerCommands) == 0 {
+		return true
+	}
+
+	return slices.Contains(r.cfg.BannerCommands, c.Args().First())
 }
 
 func (r *RootCommand) Run() error {

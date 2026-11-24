@@ -31,12 +31,17 @@ func TestRootCommandBanner(t *testing.T) {
 		name       string
 		args       []string
 		env        map[string]string
+		banners    []string
 		wantBanner bool
 	}{
 		{name: "default", args: []string{"app"}, wantBanner: true},
 		{name: "flag", args: []string{"app", "--noBanner"}},
 		{name: "env", args: []string{"app"}, env: map[string]string{"APP_NO_BANNER": "true"}},
 		{name: "completion", args: []string{"app", "--generate-shell-completion"}},
+		{name: "listed command", args: []string{"app", "serve"}, banners: []string{"serve"}, wantBanner: true},
+		{name: "unlisted command", args: []string{"app", "check"}, banners: []string{"serve"}},
+		{name: "no command", args: []string{"app"}, banners: []string{"serve"}},
+		{name: "listed command with flag", args: []string{"app", "--noBanner", "serve"}, banners: []string{"serve"}},
 		{name: "help", args: []string{"app", "--help"}},
 	}
 
@@ -53,8 +58,13 @@ func TestRootCommandBanner(t *testing.T) {
 				Writer:                &bytes.Buffer{},
 				EnableShellCompletion: true,
 				Action:                func(context.Context, *cli.Command) error { return nil },
+				Commands: []*cli.Command{
+					{Name: "serve", Action: func(context.Context, *cli.Command) error { return nil }},
+					{Name: "check", Action: func(context.Context, *cli.Command) error { return nil }},
+				},
 			}
-			root, _ := NewRootCommand(cmd)
+			root, cfg := NewRootCommand(cmd)
+			cfg.BannerCommands = tt.banners
 
 			require.NoError(t, root.RunWithContextAndArgs(context.Background(), tt.args))
 			if tt.wantBanner {
